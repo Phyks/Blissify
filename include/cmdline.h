@@ -46,10 +46,10 @@ struct gengetopt_args_info
   char * mpd_root_arg;	/**< @brief MPD library base path..  */
   char * mpd_root_orig;	/**< @brief MPD library base path. original value given at command line.  */
   const char *mpd_root_help; /**< @brief MPD library base path. help description.  */
-  char * host_arg;	/**< @brief MPD host. (default='localhost').  */
+  char * host_arg;	/**< @brief MPD host. (default='').  */
   char * host_orig;	/**< @brief MPD host. original value given at command line.  */
   const char *host_help; /**< @brief MPD host. help description.  */
-  int port_arg;	/**< @brief MPD port. (default='6600').  */
+  int port_arg;	/**< @brief MPD port. (default='0').  */
   char * port_orig;	/**< @brief MPD port. original value given at command line.  */
   const char *port_help; /**< @brief MPD port. help description.  */
   

@@ -39,8 +39,8 @@ const char *gengetopt_args_info_help[] = {
   "  -r, --rescan           Rescan the whole MPD database.  (default=off)",
   "  -u, --update           Trigger an update.  (default=off)",
   "      --mpd_root=STRING  MPD library base path.",
-  "      --host=STRING      MPD host.  (default=`localhost')",
-  "      --port=INT         MPD port.  (default=`6600')",
+  "      --host=STRING      MPD host.  (default=`')",
+  "      --port=INT         MPD port.  (default=`0')",
     0
 };
 
@@ -85,9 +85,9 @@ void clear_args (struct gengetopt_args_info *args_info)
   args_info->update_flag = 0;
   args_info->mpd_root_arg = NULL;
   args_info->mpd_root_orig = NULL;
-  args_info->host_arg = gengetopt_strdup ("localhost");
+  args_info->host_arg = gengetopt_strdup ("");
   args_info->host_orig = NULL;
-  args_info->port_arg = 6600;
+  args_info->port_arg = 0;
   args_info->port_orig = NULL;
   
 }
@@ -587,7 +587,7 @@ cmdline_parser_internal (
           
             if (update_arg( (void *)&(args_info->host_arg), 
                  &(args_info->host_orig), &(args_info->host_given),
-                &(local_args_info.host_given), optarg, 0, "localhost", ARG_STRING,
+                &(local_args_info.host_given), optarg, 0, "", ARG_STRING,
                 check_ambiguity, override, 0, 0,
                 "host", '-',
                 additional_error))
@@ -601,7 +601,7 @@ cmdline_parser_internal (
           
             if (update_arg( (void *)&(args_info->port_arg), 
                  &(args_info->port_orig), &(args_info->port_given),
-                &(local_args_info.port_given), optarg, 0, "6600", ARG_INT,
+                &(local_args_info.port_given), optarg, 0, "0", ARG_INT,
                 check_ambiguity, override, 0, 0,
                 "port", '-',
                 additional_error))

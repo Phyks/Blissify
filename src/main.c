@@ -13,6 +13,8 @@
 #include "cmdline.h"
 
 // TODO: Handle deletions from db
+// TODO: Respect MPD_HOST / PORT
+// TODO: Support MPD servers with passwords
 
 #define DEFAULT_STRING_LENGTH 255
 
@@ -230,8 +232,12 @@ int main(int argc, char** argv) {
     }
 
     // Create MPD connection
+    char *mpd_host = NULL;
+    if (strlen(args_info.host_arg) > 0) {
+        mpd_host = args_info.host_arg;
+    }
     conn = mpd_connection_new(
-            args_info.host_arg,
+            mpd_host,
             args_info.port_arg,
             30000);
     if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
