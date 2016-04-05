@@ -292,7 +292,7 @@ int main(int argc, char** argv) {
         amplitude REAL, \
         frequency REAL, \
         attack REAL, \
-        filename TEXT)",
+        filename TEXT UNIQUE)",
         NULL, NULL, NULL);
     if (SQLITE_OK != dberr) {
         fprintf(stderr, "Error creating db: %s.\n", sqlite3_errmsg(dbh));
@@ -304,7 +304,8 @@ int main(int argc, char** argv) {
         song2 INTEGER, \
         distance REAL, \
         FOREIGN KEY(song1) REFERENCES songs(id) ON DELETE CASCADE, \
-        FOREIGN KEY(song2) REFERENCES songs(id) ON DELETE CASCADE)",
+        FOREIGN KEY(song2) REFERENCES songs(id) ON DELETE CASCADE, \
+        UNIQUE (song1, song2))",
         NULL, NULL, NULL);
     if (SQLITE_OK != dberr) {
         fprintf(stderr, "Error creating db: %s.\n", sqlite3_errmsg(dbh));
