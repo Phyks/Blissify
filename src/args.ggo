@@ -1,0 +1,9 @@
+package "MPDBliss"
+version "VERSION"
+purpose "Binding MPD and Bliss."
+
+option "rescan" r "Rescan the whole MPD database." flag off
+option "update" u "Trigger an update." flag off
+option "mpd_root" - "MPD library base path." string
+option "host" - "MPD host." string default="localhost" optional
+option "port" - "MPD port." int default="6600" optional
