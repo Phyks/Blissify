@@ -177,7 +177,6 @@ void update_database(
                 fprintf(stderr, "Error while inserting data in db: %s\n\n", sqlite3_errmsg(dbh));
                 break;
             }
-            printf("%d %d %f\n", last_id, id, distance);
             sqlite3_bind_int(res2, 1, last_id);
             sqlite3_bind_int(res2, 2, id);
             sqlite3_bind_double(res2, 3, distance);
