@@ -13,8 +13,6 @@
 #include "cmdline.h"
 
 // TODO: Handle deletions from db
-// TODO: Respect MPD_HOST / PORT
-// TODO: Support MPD servers with passwords
 
 #define DEFAULT_STRING_LENGTH 255
 
