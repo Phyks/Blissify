@@ -454,7 +454,7 @@ int main(int argc, char** argv) {
     }
     // Purge db if a rescan is needed
     if (1 == args_info.rescan_flag) {
-        dberr = sqlite3_exec(dbh, "BEGIN TRANSACTION; DELETE FROM distances; DELETE FROM songs; COMMIT", NULL, NULL, NULL);
+        dberr = sqlite3_exec(dbh, "BEGIN TRANSACTION; DELETE FROM distances; DELETE FROM songs; DELETE FROM errors; COMMIT", NULL, NULL, NULL);
         if (SQLITE_OK != dberr) {
             fprintf(stderr, "Error purging existing data in db: %s.\n", sqlite3_errmsg(dbh));
             return EXIT_FAILURE;
