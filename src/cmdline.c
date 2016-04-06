@@ -37,6 +37,7 @@ const char *gengetopt_args_info_help[] = {
   "  -h, --help             Print help and exit",
   "  -V, --version          Print version and exit",
   "  -r, --rescan           Rescan the whole MPD database.  (default=off)",
+  "  -e, --rescan-errors    Rescan the errored files from the MPD database.\n                           (default=off)",
   "  -u, --update           Trigger an update.  (default=off)",
   "      --mpd_root=STRING  MPD library base path.",
   "      --host=STRING      MPD host.  (default=`')",
@@ -71,6 +72,7 @@ void clear_given (struct gengetopt_args_info *args_info)
   args_info->help_given = 0 ;
   args_info->version_given = 0 ;
   args_info->rescan_given = 0 ;
+  args_info->rescan_errors_given = 0 ;
   args_info->update_given = 0 ;
   args_info->mpd_root_given = 0 ;
   args_info->host_given = 0 ;
@@ -82,6 +84,7 @@ void clear_args (struct gengetopt_args_info *args_info)
 {
   FIX_UNUSED (args_info);
   args_info->rescan_flag = 0;
+  args_info->rescan_errors_flag = 0;
   args_info->update_flag = 0;
   args_info->mpd_root_arg = NULL;
   args_info->mpd_root_orig = NULL;
@@ -100,10 +103,11 @@ void init_args_info(struct gengetopt_args_info *args_info)
   args_info->help_help = gengetopt_args_info_help[0] ;
   args_info->version_help = gengetopt_args_info_help[1] ;
   args_info->rescan_help = gengetopt_args_info_help[2] ;
-  args_info->update_help = gengetopt_args_info_help[3] ;
-  args_info->mpd_root_help = gengetopt_args_info_help[4] ;
-  args_info->host_help = gengetopt_args_info_help[5] ;
-  args_info->port_help = gengetopt_args_info_help[6] ;
+  args_info->rescan_errors_help = gengetopt_args_info_help[3] ;
+  args_info->update_help = gengetopt_args_info_help[4] ;
+  args_info->mpd_root_help = gengetopt_args_info_help[5] ;
+  args_info->host_help = gengetopt_args_info_help[6] ;
+  args_info->port_help = gengetopt_args_info_help[7] ;
   
 }
 
@@ -228,6 +232,8 @@ cmdline_parser_dump(FILE *outfile, struct gengetopt_args_info *args_info)
     write_into_file(outfile, "version", 0, 0 );
   if (args_info->rescan_given)
     write_into_file(outfile, "rescan", 0, 0 );
+  if (args_info->rescan_errors_given)
+    write_into_file(outfile, "rescan-errors", 0, 0 );
   if (args_info->update_given)
     write_into_file(outfile, "update", 0, 0 );
   if (args_info->mpd_root_given)
@@ -521,6 +527,7 @@ cmdline_parser_internal (
         { "help",	0, NULL, 'h' },
         { "version",	0, NULL, 'V' },
         { "rescan",	0, NULL, 'r' },
+        { "rescan-errors",	0, NULL, 'e' },
         { "update",	0, NULL, 'u' },
         { "mpd_root",	1, NULL, 0 },
         { "host",	1, NULL, 0 },
@@ -528,7 +535,7 @@ cmdline_parser_internal (
         { 0,  0, 0, 0 }
       };
 
-      c = getopt_long (argc, argv, "hVru", long_options, &option_index);
+      c = getopt_long (argc, argv, "hVreu", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -550,6 +557,16 @@ cmdline_parser_internal (
           if (update_arg((void *)&(args_info->rescan_flag), 0, &(args_info->rescan_given),
               &(local_args_info.rescan_given), optarg, 0, 0, ARG_FLAG,
               check_ambiguity, override, 1, 0, "rescan", 'r',
+              additional_error))
+            goto failure;
+        
+          break;
+        case 'e':	/* Rescan the errored files from the MPD database..  */
+        
+        
+          if (update_arg((void *)&(args_info->rescan_errors_flag), 0, &(args_info->rescan_errors_given),
+              &(local_args_info.rescan_errors_given), optarg, 0, 0, ARG_FLAG,
+              check_ambiguity, override, 1, 0, "rescan-errors", 'e',
               additional_error))
             goto failure;
         

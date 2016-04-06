@@ -3,6 +3,7 @@ version "VERSION"
 purpose "Binding MPD and Bliss."
 
 option "rescan" r "Rescan the whole MPD database." flag off
+option "rescan-errors" e "Rescan the errored files from the MPD database." flag off
 option "update" u "Trigger an update." flag off
 option "mpd_root" - "MPD library base path." string
 option "host" - "MPD host." string default="" optional

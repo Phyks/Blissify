@@ -41,6 +41,8 @@ struct gengetopt_args_info
   const char *version_help; /**< @brief Print version and exit help description.  */
   int rescan_flag;	/**< @brief Rescan the whole MPD database. (default=off).  */
   const char *rescan_help; /**< @brief Rescan the whole MPD database. help description.  */
+  int rescan_errors_flag;	/**< @brief Rescan the errored files from the MPD database. (default=off).  */
+  const char *rescan_errors_help; /**< @brief Rescan the errored files from the MPD database. help description.  */
   int update_flag;	/**< @brief Trigger an update. (default=off).  */
   const char *update_help; /**< @brief Trigger an update. help description.  */
   char * mpd_root_arg;	/**< @brief MPD library base path..  */
@@ -56,6 +58,7 @@ struct gengetopt_args_info
   unsigned int help_given ;	/**< @brief Whether help was given.  */
   unsigned int version_given ;	/**< @brief Whether version was given.  */
   unsigned int rescan_given ;	/**< @brief Whether rescan was given.  */
+  unsigned int rescan_errors_given ;	/**< @brief Whether rescan-errors was given.  */
   unsigned int update_given ;	/**< @brief Whether update was given.  */
   unsigned int mpd_root_given ;	/**< @brief Whether mpd_root was given.  */
   unsigned int host_given ;	/**< @brief Whether host was given.  */
