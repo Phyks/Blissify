@@ -316,6 +316,12 @@ int main(int argc, char** argv) {
 
     // Check if a full rescan is needed
     if (1 == args_info.rescan_flag) {
+        dberr = sqlite3_exec(dbh, "BEGIN TRANSACTION; DELETE FROM distances; DELETE FROM songs; COMMIT");
+        if (SQLITE_OK != dberr) {
+            fprintf(stderr, "Error purging existing data in db: %s.\n", sqlite3_errmsg(dbh));
+            sqlite3_close(dbh);
+            return EXIT_FAILURE;
+        }
         update_database(conn, last_mtime, mpd_base_path);
     }
     // Else, if we requested an update of the db
