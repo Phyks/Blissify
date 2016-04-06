@@ -146,7 +146,7 @@ int _parse_music_helper(
         int id = sqlite3_column_int(res, 0);
         if (id == last_id) {
             // Skip last inserted item
-            return 1;
+            continue;
         }
         struct force_vector_s song_db;
         song_db.tempo = sqlite3_column_double(res, 1);
@@ -290,6 +290,7 @@ void update_database(
  * Rescan errored files
  *
  * @param mpd_base_path     Root directory of the MPD library.
+ * @return  0 on success, non zero otherwise.
  */
 void rescan_errored(const char *mpd_base_path)
 {
