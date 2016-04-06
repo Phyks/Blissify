@@ -75,6 +75,8 @@ int _parse_music_helper(
     struct bl_song song_analysis;
     if (BL_UNEXPECTED == bl_analyze(song_full_uri, &song_analysis)) {
         fprintf(stderr, "Error while parsing song: %s.\n\n", song_full_uri);
+        // Free song analysis
+        bl_free_song(&song_analysis);
         // Store error in db
         sqlite3_prepare_v2(dbh,
                 "INSERT INTO errors(filename) VALUES(?)",
@@ -90,6 +92,8 @@ int _parse_music_helper(
     int dberr = sqlite3_exec(dbh, "BEGIN TRANSACTION", NULL, NULL, NULL);
     if (SQLITE_OK != dberr) {
         fprintf(stderr, "Error while inserting data in db: %s\n\n", sqlite3_errmsg(dbh));
+        // Free song analysis
+        bl_free_song(&song_analysis);
         sqlite3_exec(dbh, "ROLLBACK", NULL, NULL, NULL);
         // Store error in db
         sqlite3_prepare_v2(dbh,
@@ -107,6 +111,8 @@ int _parse_music_helper(
             -1, &res, 0);
     if (SQLITE_OK != dberr) {
         fprintf(stderr, "Error while inserting data in db: %s\n\n", sqlite3_errmsg(dbh));
+        // Free song analysis
+        bl_free_song(&song_analysis);
         sqlite3_exec(dbh, "ROLLBACK", NULL, NULL, NULL);
         // Store error in db
         sqlite3_prepare_v2(dbh,
@@ -130,6 +136,8 @@ int _parse_music_helper(
     dberr = sqlite3_prepare_v2(dbh, "SELECT id, tempo, amplitude, frequency, attack FROM songs", -1, &res, 0);
     if (SQLITE_OK != dberr) {
         fprintf(stderr, "Error while inserting data in db: %s\n\n", sqlite3_errmsg(dbh));
+        // Free song analysis
+        bl_free_song(&song_analysis);
         sqlite3_exec(dbh, "ROLLBACK", NULL, NULL, NULL);
         // Store error in db
         sqlite3_prepare_v2(dbh,
@@ -170,6 +178,8 @@ int _parse_music_helper(
         sqlite3_finalize(res2);
     }
     if (SQLITE_OK != dberr2) {
+        // Free song analysis
+        bl_free_song(&song_analysis);
         sqlite3_exec(dbh, "ROLLBACK", NULL, NULL, NULL);
         // Store error in db
         sqlite3_prepare_v2(dbh,
@@ -186,6 +196,8 @@ int _parse_music_helper(
     dberr = sqlite3_exec(dbh, "COMMIT", NULL, NULL, NULL);
     if (SQLITE_OK != dberr) {
         fprintf(stderr, "Error while inserting data in db: %s\n\n", sqlite3_errmsg(dbh));
+        // Free song analysis
+        bl_free_song(&song_analysis);
         sqlite3_exec(dbh, "ROLLBACK", NULL, NULL, NULL);
         // Store error in db
         sqlite3_prepare_v2(dbh,
@@ -197,6 +209,9 @@ int _parse_music_helper(
         // Pass file
         return 1;
     }
+
+    // Free song analysis
+    bl_free_song(&song_analysis);
 
     return 0;
 }
@@ -257,6 +272,7 @@ void update_database(
         // Compute bl_analyze and store it
         const char *song_uri = mpd_song_get_uri(song);
         if (1 == _parse_music_helper(dbh, mpd_base_path, song_uri)) {
+            mpd_entity_free(entity);
             continue;
         }
 
@@ -460,6 +476,8 @@ int main(int argc, char** argv) {
             fprintf(stderr, "Error purging existing data in db: %s.\n", sqlite3_errmsg(dbh));
             return EXIT_FAILURE;
         }
+        // Set last_mtime to 0
+        last_mtime = 0;
     }
     // Close db connection
     sqlite3_close(dbh);
@@ -469,7 +487,7 @@ int main(int argc, char** argv) {
         update_database(conn, last_mtime, mpd_base_path);
     }
     // Else, if we want to rescan errored files
-    if (1 == args_info.rescan_errors_flag) {
+    else if (1 == args_info.rescan_errors_flag) {
         rescan_errored(mpd_base_path);
     }
     // Else, if we requested an update of the db
