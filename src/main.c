@@ -233,6 +233,18 @@ void update_database(
     // Store latest mtime seen
     time_t latest_mtime = initial_mtime;
 
+    // Get number of songs in db
+    struct mpd_stats* stats = mpd_run_stats(conn);
+    if (NULL == stats) {
+        fprintf(stderr, "Unable to fetch number of songs in the db.\n");
+        return;
+    }
+    unsigned int n_songs = mpd_stats_get_number_of_songs(stats);
+    if (0 == n_songs) {
+        fprintf(stderr, "Unable to fetch number of songs in the db.\n");
+        return;
+    }
+
     // Get the list of all the files to process
     if (!mpd_send_list_all_meta(conn, NULL)) {
         fprintf(stderr, "Unable to get a full list of items in the db.\n");
@@ -246,26 +258,35 @@ void update_database(
         return;
     }
 
-    // Process the received list
+    // Retrieve the received list in memory, to prevent timeout
+    struct mpd_entity **entities = malloc(sizeof(struct mpd_entity *) * n_songs);
     struct mpd_entity *entity;
+    int i = 0;
     while ((entity = mpd_recv_entity(conn)) != NULL) {
-        const struct mpd_song *song;
-
         switch (mpd_entity_get_type(entity)) {
             case MPD_ENTITY_TYPE_SONG:
-                song = mpd_entity_get_song(entity);
+                entities[i] = entity;
                 break;
 
             case MPD_ENTITY_TYPE_UNKNOWN:
             case MPD_ENTITY_TYPE_DIRECTORY:
             case MPD_ENTITY_TYPE_PLAYLIST:
                 // Pass such types
+                mpd_entity_free(entity);
                 continue;
         }
+        ++i;
+    }
+
+    // Process all the entities
+    for (int i = 0; i < n_songs; ++i) {
+        struct mpd_entity *entity = entities[i];
+        const struct mpd_song *song = mpd_entity_get_song(entity);
 
         // Pass song if already seen
         time_t song_mtime = mpd_song_get_last_modified(song);
         if (difftime(song_mtime, initial_mtime) <= 0) {
+            mpd_entity_free(entity);
             continue;
         }
 
@@ -289,7 +310,13 @@ void update_database(
     // Close SQLite connection
     sqlite3_close(dbh);
 
-    // Update last_mtime
+    // Check if exit was due to an error
+    if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
+        printf("MPD Error: %s\n", mpd_connection_get_error_message(conn));
+        return;
+    }
+
+    // Update last_mtime, if no error occured.
     FILE *fp = fopen(mpdbliss_data_file, "w+");
     if (NULL != fp) {
         fprintf(fp, "%d\n", latest_mtime);
@@ -299,6 +326,9 @@ void update_database(
         fprintf(stderr, "Unable to store latest mtime seen.\n");
         return;
     }
+
+    free(entities);
+    printf("Done! :)\n");
 }
 
 
@@ -306,7 +336,6 @@ void update_database(
  * Rescan errored files
  *
  * @param mpd_base_path     Root directory of the MPD library.
- * @return  0 on success, non zero otherwise.
  */
 void rescan_errored(const char *mpd_base_path)
 {
@@ -351,6 +380,8 @@ void rescan_errored(const char *mpd_base_path)
 
     // Close SQLite connection
     sqlite3_close(dbh);
+
+    printf("Done! :)\n");
 }
 
 
