@@ -422,7 +422,11 @@ int main(int argc, char** argv) {
         }
     }
 
-    char *mpd_base_path = args_info.mpd_root_arg;
+    // Handle mpd_root argument
+    char mpd_base_path[DEFAULT_STRING_LENGTH] = "";
+    strncat(mpd_base_path, args_info.mpd_root_arg, DEFAULT_STRING_LENGTH);
+    strip_trailing_slash(mpd_base_path);
+    strncat(mpd_base_path, "/", DEFAULT_STRING_LENGTH);
 
     // Get data directory
     char *xdg_data_home_env = getenv("XDG_DATA_HOME");
