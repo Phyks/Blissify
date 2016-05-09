@@ -4,7 +4,7 @@ project (MPDBliss C)
 
 add_subdirectory (bliss)
 
-file (GLOB MPDBLISS_SRC "src/*.c")
+file (GLOB COMMON_SRC "src/*.c")
 
 # TODO \/
 find_package(PkgConfig REQUIRED)
@@ -23,10 +23,19 @@ add_definitions (-Wall -Wno-long-long -pedantic -std=c99)
 # TODO /\
 
 add_executable (mpdbliss
-    ${MPDBLISS_SRC})
+	${COMMON_SRC} "main_mpd.c")
 
 target_link_libraries (mpdbliss
     m
     sqlite3
     mpdclient
+    bliss)
+
+
+add_executable (argsbliss
+	${COMMON_SRC} "main_args.c")
+
+target_link_libraries (argsbliss
+    m
+    sqlite3
     bliss)

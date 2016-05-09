@@ -76,6 +76,12 @@ long int  update_database(
         fprintf(stderr, "Unable to open SQLite db.\n");
         return -1;
     }
+    int dberr = sqlite3_exec(dbh, "PRAGMA foreign_keys = ON", NULL, NULL, NULL);
+    if (SQLITE_OK != dberr) {
+        fprintf(stderr, "Unable to open SQLite db.\n");
+        sqlite3_close(dbh);
+		exit(EXIT_FAILURE);
+    }
 
     // Retrieve the received list in memory, to prevent timeout
     struct mpd_entity **entities = malloc(sizeof(struct mpd_entity *) * n_songs);
