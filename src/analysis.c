@@ -156,8 +156,8 @@ int _parse_music_helper(
     sqlite3_bind_double(res, 3, song_analysis.force_vector.frequency);
     sqlite3_bind_double(res, 4, song_analysis.force_vector.attack);
     sqlite3_bind_text(res, 5, song_uri, strlen(song_uri), SQLITE_STATIC);
-    sqlite3_step(res);
-    if (SQLITE_OK != dberr) {
+    dberr = sqlite3_step(res);
+    if (SQLITE_DONE != dberr) {
         // Free song analysis
         bl_free_song(&song_analysis);
         sqlite3_exec(dbh, "ROLLBACK", NULL, NULL, NULL);
