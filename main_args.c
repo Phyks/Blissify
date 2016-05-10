@@ -5,6 +5,7 @@
 #include <sqlite3.h>
 
 #include "analysis.h"
+#include "constants.h"
 #include "utilities.h"
 
 // TODO: Handle deletions from db
@@ -17,8 +18,8 @@ int main(int argc, char** argv) {
 	}
 
     // Get data directory, init db file
-	char mpdbliss_data_folder[DEFAULT_STRING_LENGTH] = "";
-	char mpdbliss_data_db[DEFAULT_STRING_LENGTH] = "";
+	char mpdbliss_data_folder[DEFAULT_STRING_LENGTH + 1] = "";
+	char mpdbliss_data_db[DEFAULT_STRING_LENGTH + 1] = "";
 	if (0 != _init_db(mpdbliss_data_folder, mpdbliss_data_db)) {
 		exit(EXIT_FAILURE);
 	}

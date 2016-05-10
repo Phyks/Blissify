@@ -1,0 +1,6 @@
+#ifndef CONSTANTS_H
+#define CONSTANTS_H
+
+#define DEFAULT_STRING_LENGTH 10000
+
+#endif  // CONSTANTS_H

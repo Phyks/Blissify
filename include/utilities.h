@@ -1,8 +1,6 @@
 #ifndef UTILITIES_H
 #define UTILITIES_H
 
-#define DEFAULT_STRING_LENGTH 1024
-
 
 /**
  * Strip the trailing slash from a string.

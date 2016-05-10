@@ -57,3 +57,13 @@ database and `mpdbliss` database in sync.
 
 Check the `client.sh` script for an example client script to build smooth MPD
 playlists.
+out any flag, `mpdbliss` will listen for MPD IDLE protocol, and trigger
+  an update of the database whenever the MPD database is modified.
+
+Typical usage would be to run a `--rescan` first, and then either do periodic
+`--update` or let it run listening at MPD IDLE protocol to maintain MPD
+database and `mpdbliss` database in sync.
+
+
+Check the `client/client.py` script for an example client script to build smooth MPD
+playlists.

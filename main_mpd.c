@@ -9,6 +9,7 @@
 
 #include "analysis.h"
 #include "cmdline.h"
+#include "constants.h"
 #include "utilities.h"
 
 // TODO: Handle deletions from db
@@ -186,20 +187,20 @@ int main(int argc, char** argv) {
     }
 
     // Handle mpd_root argument
-    char mpd_base_path[DEFAULT_STRING_LENGTH] = "";
+    char mpd_base_path[DEFAULT_STRING_LENGTH + 1] = "";
     strncat(mpd_base_path, args_info.mpd_root_arg, DEFAULT_STRING_LENGTH);
     strip_trailing_slash(mpd_base_path);
     strncat(mpd_base_path, "/", DEFAULT_STRING_LENGTH - strlen(mpd_base_path));
 
     // Get data directory, init db file
-	char mpdbliss_data_folder[DEFAULT_STRING_LENGTH] = "";
-	char mpdbliss_data_db[DEFAULT_STRING_LENGTH] = "";
+	char mpdbliss_data_folder[DEFAULT_STRING_LENGTH + 1] = "";
+	char mpdbliss_data_db[DEFAULT_STRING_LENGTH + 1] = "";
 	if (0 != _init_db(mpdbliss_data_folder, mpdbliss_data_db)) {
 		exit(EXIT_FAILURE);
 	}
 
     // Set data file path
-	char mpdbliss_data_file[DEFAULT_STRING_LENGTH] = "";
+	char mpdbliss_data_file[DEFAULT_STRING_LENGTH + 1] = "";
     strncat(mpdbliss_data_file, mpdbliss_data_folder, DEFAULT_STRING_LENGTH);
     strncat(mpdbliss_data_file, "/latest_mtime.txt", DEFAULT_STRING_LENGTH - strlen(mpdbliss_data_file));
 
