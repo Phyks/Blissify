@@ -21,7 +21,7 @@ def main():
     cur = conn.cursor()
 
     # Get cached distances from db
-    cur.execute("SELECT song1, song2, distance FROM distances")
+    cur.execute("SELECT song1, song2, distance, similarity FROM distances")
     cached_distances = cur.fetchall()
 
     # Get all songs
@@ -47,20 +47,41 @@ def main():
                 (song1["frequency"] - song2["frequency"])**2 +
                 (song1["attack"] - song2["attack"])**2
             )
-            logging.debug("Distance between %s and %s is %f." %
-                          (song1["filename"], song2["filename"], distance))
+            similarity = (
+                (song1["tempo"] * song2["tempo"] +
+                 song1["amplitude"] * song2["amplitude"] +
+                 song1["frequency"] * song2["frequency"] +
+                 song1["attack"] * song2["attack"]) /
+                (
+                    math.sqrt(
+                        song1["tempo"]**2 +
+                        song1["amplitude"]**2 +
+                        song1["frequency"]**2 +
+                        song1["attack"]**2) *
+                    math.sqrt(
+                        song2["tempo"]**2 +
+                        song2["amplitude"]**2 +
+                        song2["frequency"]**2 +
+                        song2["attack"]**2)
+                )
+            )
+
+            logging.debug("Distance between %s and %s is (%f, %f)." %
+                          (song1["filename"], song2["filename"], distance,
+                           similarity))
             # Store distance in db cache
             try:
                 logging.debug("Storing distance in database.")
                 conn.execute(
-                    "INSERT INTO distances(song1, song2, distance) VALUES(?, ?, ?)",
-                    (song1["id"], song2["id"], distance))
+                    "INSERT INTO distances(song1, song2, distance, similarity) VALUES(?, ?, ?, ?)",
+                    (song1["id"], song2["id"], distance, similarity))
                 conn.commit()
                 # Update cached_distances list
                 cached_distances.append({
                     "song1": song1["id"],
                     "song2": song2["id"],
-                    "distance": distance
+                    "distance": distance,
+                    "similarity": similarity
                 })
             except sqlite3.IntegrityError:
                 logging.warning("Unable to insert distance in database.")

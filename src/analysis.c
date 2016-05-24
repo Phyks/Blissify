@@ -62,6 +62,7 @@ int _init_db(char *data_folder, char* db_path)
         song1 INTEGER, \
         song2 INTEGER, \
         distance REAL, \
+        similarity REAL, \
         FOREIGN KEY(song1) REFERENCES songs(id) ON DELETE CASCADE, \
         FOREIGN KEY(song2) REFERENCES songs(id) ON DELETE CASCADE, \
         UNIQUE (song1, song2))",
