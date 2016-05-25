@@ -19,12 +19,12 @@ int _init_db(char *data_folder, char* db_path)
     if (NULL == xdg_data_home_env) {
         strncat(data_folder, getenv("HOME"), DEFAULT_STRING_LENGTH);
         strip_trailing_slash(data_folder);
-        strncat(data_folder, "/.local/share/mpdbliss", DEFAULT_STRING_LENGTH - strlen(data_folder));
+        strncat(data_folder, "/.local/share/blissify", DEFAULT_STRING_LENGTH - strlen(data_folder));
     }
     else {
         strncat(data_folder, xdg_data_home_env, DEFAULT_STRING_LENGTH);
         strip_trailing_slash(data_folder);
-        strncat(data_folder, "/mpdbliss", DEFAULT_STRING_LENGTH - strlen(data_folder));
+        strncat(data_folder, "/blissify", DEFAULT_STRING_LENGTH - strlen(data_folder));
     }
 
     // Ensure data folder exists

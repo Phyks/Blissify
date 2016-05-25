@@ -18,9 +18,9 @@ int main(int argc, char** argv) {
 	}
 
     // Get data directory, init db file
-	char mpdbliss_data_folder[DEFAULT_STRING_LENGTH + 1] = "";
-	char mpdbliss_data_db[DEFAULT_STRING_LENGTH + 1] = "";
-	if (0 != _init_db(mpdbliss_data_folder, mpdbliss_data_db)) {
+	char blissify_data_folder[DEFAULT_STRING_LENGTH + 1] = "";
+	char blissify_data_db[DEFAULT_STRING_LENGTH + 1] = "";
+	if (0 != _init_db(blissify_data_folder, blissify_data_db)) {
 		exit(EXIT_FAILURE);
 	}
 
@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
 
     // Connect to SQLite db
     sqlite3 *dbh;
-    if (0 != sqlite3_open(mpdbliss_data_db, &dbh)) {
+    if (0 != sqlite3_open(blissify_data_db, &dbh)) {
         fprintf(stderr, "Unable to open SQLite db.\n");
 		exit(EXIT_FAILURE);
     }

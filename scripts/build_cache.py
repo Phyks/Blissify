@@ -7,13 +7,13 @@ import sqlite3
 logging.basicConfig(level=logging.DEBUG)
 
 if "XDG_DATA_HOME" in os.environ:
-    _MPDBLISS_DATA_HOME = os.path.expandvars("$XDG_DATA_HOME/mpdbliss")
+    _BLISSIFY_DATA_HOME = os.path.expandvars("$XDG_DATA_HOME/blissify")
 else:
-    _MPDBLISS_DATA_HOME = os.path.expanduser("~/.local/share/mpdbliss")
+    _BLISSIFY_DATA_HOME = os.path.expanduser("~/.local/share/blissify")
 
 
 def main():
-    db_path = os.path.join(_MPDBLISS_DATA_HOME, "db.sqlite3")
+    db_path = os.path.join(_BLISSIFY_DATA_HOME, "db.sqlite3")
     logging.debug("Using DB path: %s." % (db_path,))
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row

@@ -19,6 +19,8 @@ import sys
 
 from mpd import MPDClient
 
+# TODO: Timeout
+
 logging.basicConfig(level=logging.INFO)
 
 _QUEUE_LENGTH = 20
@@ -26,9 +28,9 @@ _DISTANCE_THRESHOLD = 4.0
 _SIMILARITY_THRESHOLD = 0.95
 
 if "XDG_DATA_HOME" in os.environ:
-    _MPDBLISS_DATA_HOME = os.path.expandvars("$XDG_DATA_HOME/mpdbliss")
+    _BLISSIFY_DATA_HOME = os.path.expandvars("$XDG_DATA_HOME/blissify")
 else:
-    _MPDBLISS_DATA_HOME = os.path.expanduser("~/.local/share/mpdbliss")
+    _BLISSIFY_DATA_HOME = os.path.expanduser("~/.local/share/blissify")
 
 
 def main(queue_length):
@@ -50,7 +52,7 @@ def main(queue_length):
     if mpd_password is not None:
         client.password(mpd_password)
     # Connect to db
-    db_path = os.path.join(_MPDBLISS_DATA_HOME, "db.sqlite3")
+    db_path = os.path.join(_BLISSIFY_DATA_HOME, "db.sqlite3")
     logging.debug("Using DB path: %s." % (db_path,))
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row

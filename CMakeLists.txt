@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.8)
 
-project (MPDBliss C)
+project (Blissify C)
 
 add_subdirectory (bliss)
 
@@ -13,20 +13,10 @@ link_directories(${MULTIMEDIA_LIBRARY_DIRS})
 add_definitions(${MULTIMEDIA_CFLAGS_OTHER})
 add_definitions (-Wall -Wno-long-long -pedantic -std=c99)
 
-add_executable (mpdbliss
-	${COMMON_SRC} "main_mpd.c")
+add_executable (blissify
+	${COMMON_SRC})
 
-target_link_libraries (mpdbliss
-    m
-    sqlite3
-    mpdclient
-    bliss)
-
-
-add_executable (argsbliss
-	${COMMON_SRC} "main_args.c")
-
-target_link_libraries (argsbliss
+target_link_libraries (blissify
     m
     sqlite3
     bliss)
