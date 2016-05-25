@@ -3,6 +3,8 @@
 This is a script to build the necessary database from a MPD music library.
 
 Run `python3 server.py --help` for more infos on how to use.
+
+_Note_: `blissify` should be available in your `$PATH`.
 """
 import argparse
 import dateutil.parser
@@ -54,6 +56,16 @@ def full_rescan(mpd_root):
     """
     Perform a full rescan of the MPD library.
     """
+    # Connect to db
+    db_path = os.path.join(_BLISSIFY_DATA_HOME, "db.sqlite3")
+    logging.debug("Using DB path: %s." % (db_path,))
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    conn.execute('pragma foreign_keys=ON')
+    cur = conn.cursor()
+    # Purge db
+    cur.executescript("BEGIN TRANSACTION; DELETE FROM distances; DELETE FROM songs; DELETE FROM errors; COMMIT;")
+
     client = init_connection()
     # Get all songs from MPD and Blissify them
     all_songs = [x["file"] for x in client.listall() if "file" in x]

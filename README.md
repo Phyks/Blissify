@@ -1,13 +1,16 @@
-MPDBliss
+Blissify
 ========
 
-MPDBliss is an attempt at binding
-[Bliss](https://github.com/Polochon-street/bliss) to MPD to be able to play
+Blissify is a wrapper around Bliss
+[Bliss](https://github.com/Polochon-street/bliss) to compute and store values
+in an SQLite database.
+
+It is done in an attempot to bind Bliss to MPD to be able to play
 smooth mixes with MPD, _à la_ Grooveshark radio.
 
 ## Dependencies
 
-To build it you will need `sqlite3` and `libmpdclient`, plus the required
+To build it you will need `sqlite3`, plus the required
 dependencies from `bliss` (see
 [https://github.com/Polochon-street/bliss](https://github.com/Polochon-street/bliss)).
 
@@ -15,55 +18,86 @@ dependencies from `bliss` (see
 ## Build
 
 ```
-git clone --recursive https://github.com/phyks/mpdbliss
-cd mpdbliss; mkdir build
+git clone --recursive https://github.com/phyks/blissify
+cd blissify; mkdir build
 cmake ..
 make
 ```
 
-This will build a `mpdbliss` executable.
+This will build a `blissify` executable.
 
 
 ## Usage
 
-`mpdbliss` is made of two components. First one, `mpdbliss`, has to run on the
-MPD server machine (or at least have access to the music files) and will build
-and maintain a parallel database of song "features" and distances between
-them, as computed by `bliss`. This will be stored in
-`$XDG_DATA_HOME/mpdbliss/` (defaults to `~/.local/share/mpdbliss`). Second one
-is a client, to create playlist based on the currently playing song.
-`client.sh` script at the root of this repository is an example of such a
-script. Such client script needs to have access to the database build in first
-step.
+This repo contains several codes and scripts.
 
-See `mpdbliss --help` for up to date doc.
+## The main `blissify` executable
 
-_Note_: `mpdbliss` supports the `MPD_HOST`/`MPD_PORT` environment variables.
-You can overload them passing it command-line argument. Passwords should be
-provided in the host string following the standard MPD syntax.
+The main `blissify` executable can be used to compute the values necessary to
+use Bliss for various song files and store them in a SQLite database.
 
-There are basically 3 modes of operation:
-* `--rescan` which will trigger a full rescan of your MPD database and
-  recreate the associated bliss database.
-* `--update` which will do the same, but will only consider newly added
-  musics.
-* Without any flag, `mpdbliss` will listen for MPD IDLE protocol, and trigger
-  an update of the database whenever the MPD database is modified.
+This executable takes a first argument being the basepath and a list of
+filenames relative to this basepath as argument. It will compute values using
+Bliss and store them in a SQLite database located in
+`$XDG_DATA_HOME/blissify/db.sqlite3` (defaults to
+`~/.local/share/blissify/db.sqlite3`).
 
-Typical usage would be to run a `--rescan` first, and then either do periodic
-`--update` or let it run listening at MPD IDLE protocol to maintain MPD
-database and `mpdbliss` database in sync.
+You can do whatever you want with this db afterwards.
 
 
-Check the `client.sh` script for an example client script to build smooth MPD
-playlists.
-out any flag, `mpdbliss` will listen for MPD IDLE protocol, and trigger
-  an update of the database whenever the MPD database is modified.
+## The MPD server-side script
 
-Typical usage would be to run a `--rescan` first, and then either do periodic
-`--update` or let it run listening at MPD IDLE protocol to maintain MPD
-database and `mpdbliss` database in sync.
+In the `mpd/` folder of this repo, you will find a `server.py` script. This is
+a simple Python script to easily build the database from your MPD music
+library. It calls `blissify` under the hood, so note that the `blissify`
+executable **SHOULD** be in your `$PATH`.
+
+It takes a `mpd_root` argument to set the top path of your MPD music library.
+You can use either
+
+* `--full-rescan` to purge the db and perform a full scan of your MPD music
+  library.
+* `--rescan-errored` to scan failed files stored in database (from a previous
+  run). This option is usable even if you do not use MPD.
+* `--update` to perform an update based on new additions to the library.
+* `--listen` to listen to MPD IDLE signals on database update and update the
+  database accordingly in realtime.
+
+Connection to your MPD server is handled by `$MPD_HOST` and `$MPD_PORT`
+(defaulting to `localhost` and `6600`), as described in `mpc` man page.
 
 
-Check the `client/client.py` script for an example client script to build smooth MPD
-playlists.
+_Note_: This step can be quite long. It took me around 50 hours to build the
+database for a library with 50k songs.
+
+## The MPD client-side script
+
+Once you have built the database, you may want to play a continuous mix with
+MPD. This is the purpose of the `client.py` script in `mpd/×` folder.
+
+This script also uses the same environment variables as `mpc` does to connect to your MPD server.
+
+_Note_: This script needs to have access to the database you built previously.
+Then, you should either copy the database on the client (in the same
+`$XDG_DATA_HOME/blissify` folder) or run it on the server.
+
+It takes a single (optional) argument which is the number of songs to add to the playlist. Default is 20.
+
+It builds a continuous mix starting from the latest song in your playlist. If your playlist is empty, it will start from a random song.
+
+_Note_: If random mode is enabled in MPD, the script will warn you about it. Indeed, in this case, the mix is no longer continuous.
+
+
+## The cache building script
+
+Finally, in `scripts` folder, you will find a Python script `build_cache.py` to
+build the distances cache.
+
+Whenever you want to create a continuous mix, the client script will iterate
+through your music library, compute pairwise distances and take a close enough
+song. These computed distances are stored in the database as a cache, to
+generate a playlist faster the next time.
+
+This `build_cache.py` script can be used to precompute the pairwise distances
+and build the cache, if you are willing to make some extra computation to
+generate mixes faster.
