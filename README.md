@@ -1,7 +1,7 @@
 Blissify
 ========
 
-Blissify is a wrapper around Bliss
+Blissify is a wrapper around
 [Bliss](https://github.com/Polochon-street/bliss) to compute and store values
 in an SQLite database.
 
