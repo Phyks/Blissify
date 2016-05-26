@@ -19,7 +19,7 @@ dependencies from `bliss` (see
 
 ```
 git clone --recursive https://github.com/phyks/blissify
-cd blissify; mkdir build
+cd blissify; mkdir build; cd build
 cmake ..
 make
 ```
