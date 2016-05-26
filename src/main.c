@@ -1,6 +1,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <sqlite3.h>
 
@@ -24,7 +25,10 @@ int main(int argc, char** argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	const char *base_path = argv[1];
+	char base_path[DEFAULT_STRING_LENGTH + 1] = "";
+    strncat(base_path, argv[1], DEFAULT_STRING_LENGTH);
+    strip_trailing_slash(base_path);
+    strncat(base_path, "/", 1 - strlen(base_path));
 
     // Connect to SQLite db
     sqlite3 *dbh;
