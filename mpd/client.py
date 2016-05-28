@@ -14,12 +14,85 @@ import math
 import os
 import random
 import sqlite3
-import subprocess
+import socket
 import sys
 
-from mpd import MPDClient
+import mpd
 
-# TODO: Timeout
+
+class PersistentMPDClient(mpd.MPDClient):
+    """
+    From
+    https://github.com/schamp/PersistentMPDClient/blob/master/PersistentMPDClient.py
+    """
+    def __init__(self, socket=None, host=None, port=None):
+        super(PersistentMPDClient, self).__init__()
+        self.socket = socket
+        self.host = host
+        self.port = port
+
+        self.do_connect()
+        # get list of available commands from client
+        self.command_list = self.commands()
+
+        # commands not to intercept
+        self.command_blacklist = ['ping']
+
+        # wrap all valid MPDClient functions
+        # in a ping-connection-retry wrapper
+        for cmd in self.command_list:
+            if cmd not in self.command_blacklist:
+                if hasattr(super(PersistentMPDClient, self), cmd):
+                    super_fun = super(PersistentMPDClient, self).__getattribute__(cmd)
+                    new_fun = self.try_cmd(super_fun)
+                    print("Setting interceptor for {}".format(cmd))
+                    setattr(self, cmd, new_fun)
+                else:
+                    print("Attr {} not available!".format(cmd))
+
+    # create a wrapper for a function (such as an MPDClient
+    # member function) that will verify a connection (and
+    # reconnect if necessary) before executing that function.
+    # functions wrapped in this way should always succeed
+    # (if the server is up)
+    # we ping first because we don't want to retry the same
+    # function if there's a failure, we want to use the noop
+    # to check connectivity
+    def try_cmd(self, cmd_fun):
+        def fun(*pargs, **kwargs):
+            try:
+                self.ping()
+            except (mpd.ConnectionError, OSError):
+                self.do_connect()
+            return cmd_fun(*pargs, **kwargs)
+        return fun
+
+    # needs a name that does not collide with parent connect() function
+    def do_connect(self):
+        try:
+            try:
+                self.disconnect()
+            # if it's a TCP connection, we'll get a socket error
+            # if we try to disconnect when the connection is lost
+            except mpd.ConnectionError:
+                pass
+            # if it's a socket connection, we'll get a BrokenPipeError
+            # if we try to disconnect when the connection is lost
+            # but we have to retry the disconnect, because we'll get
+            # an "Already connected" error if we don't.
+            # the second one should succeed.
+            except BrokenPipeError:
+                try:
+                    self.disconnect()
+                except:
+                    print("Second disconnect failed, yikes.")
+            if self.socket:
+                self.connect(self.socket, None)
+            else:
+                self.connect(self.host, self.port)
+        except socket.error:
+            print("Connection refused.")
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -47,7 +120,7 @@ def main(queue_length):
         mpd_port = 6600
 
     # Connect to MPD²
-    client = MPDClient()
+    client = PersistentMPDClient()
     client.connect(mpd_host, mpd_port)
     if mpd_password is not None:
         client.password(mpd_password)
