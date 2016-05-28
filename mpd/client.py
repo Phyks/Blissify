@@ -26,7 +26,7 @@ class PersistentMPDClient(mpd.MPDClient):
     https://github.com/schamp/PersistentMPDClient/blob/master/PersistentMPDClient.py
     """
     def __init__(self, socket=None, host=None, port=None):
-        super(PersistentMPDClient, self).__init__()
+        super().__init__()
         self.socket = socket
         self.host = host
         self.port = port
@@ -45,10 +45,7 @@ class PersistentMPDClient(mpd.MPDClient):
                 if hasattr(super(PersistentMPDClient, self), cmd):
                     super_fun = super(PersistentMPDClient, self).__getattribute__(cmd)
                     new_fun = self.try_cmd(super_fun)
-                    print("Setting interceptor for {}".format(cmd))
                     setattr(self, cmd, new_fun)
-                else:
-                    print("Attr {} not available!".format(cmd))
 
     # create a wrapper for a function (such as an MPDClient
     # member function) that will verify a connection (and
@@ -120,8 +117,7 @@ def main(queue_length):
         mpd_port = 6600
 
     # Connect to MPD²
-    client = PersistentMPDClient()
-    client.connect(mpd_host, mpd_port)
+    client = PersistentMPDClient(host=mpd_host, port=mpd_port)
     if mpd_password is not None:
         client.password(mpd_password)
     # Connect to db
@@ -134,7 +130,7 @@ def main(queue_length):
 
     # Ensure random is not enabled
     status = client.status()
-    if status["random"] != 0:
+    if int(status["random"]) != 0:
         logging.warning("Random mode is enabled. Are you sure you want it?")
 
     # Take the last song from current playlist and iterate from it
