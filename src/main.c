@@ -42,6 +42,20 @@ int main(int argc, char** argv) {
         sqlite3_close(dbh);
 		exit(EXIT_FAILURE);
     }
+    dberr = sqlite3_exec(dbh, "SELECT value FROM metadata WHERE name=version", NULL, NULL, NULL);
+    if (SQLITE_OK != dberr) {
+        fprintf(stderr, "Error while fetching data in db: %s\n\n", sqlite3_errmsg(dbh));
+        sqlite3_close(dbh);
+        exit(EXIT_FAILURE);
+    }
+    sqlite3_stmt *res = NULL;
+    while (sqlite3_step(res) == SQLITE_ROW) {
+        const char* version = (char*) sqlite3_column_text(res, 1);
+        if (strcmp(version, VERSION) != 0) {
+            fprintf(stderr, "DB is in an older version. Run update script and start again.\n");
+            exit(EXIT_FAILURE);
+        }
+    }
 
 	for (int i = 2; i < argc; ++i) {
 		_parse_music_helper(dbh, base_path, argv[i]);

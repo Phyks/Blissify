@@ -47,7 +47,9 @@ int _init_db(char *data_folder, char* db_path)
     }
     dberr = sqlite3_exec(dbh, "CREATE TABLE IF NOT EXISTS songs( \
         id INTEGER PRIMARY KEY, \
-        tempo REAL, \
+        tempo1 REAL, \
+        tempo2 REAL, \
+        tempo3 REAL, \
         amplitude REAL, \
         frequency REAL, \
         attack REAL, \
@@ -80,6 +82,22 @@ int _init_db(char *data_folder, char* db_path)
         sqlite3_close(dbh);
         return 1;
     }
+    dberr = sqlite3_exec(dbh, "CREATE TABLE IF NOT EXISTS metadata( \
+        name TEXT UNIQUE, \
+        value TEXT)", NULL, NULL, NULL);
+    if (SQLITE_OK != dberr) {
+        fprintf(stderr, "Error creating db: %s.\n", sqlite3_errmsg(dbh));
+        sqlite3_close(dbh);
+        return 1;
+    }
+    sqlite3_stmt *res;
+    sqlite3_prepare_v2(dbh,
+            "INSERT INTO metadata(name, value) VALUES(?, ?)",
+            -1, &res, 0);
+    sqlite3_bind_text(res, 1, "version", strlen("version"), SQLITE_STATIC);
+    sqlite3_bind_text(res, 2, VERSION, strlen(VERSION), SQLITE_STATIC);
+    sqlite3_step(res);
+    sqlite3_finalize(res);
 	sqlite3_close(dbh);
 	return 0;
 }
@@ -135,7 +153,7 @@ int _parse_music_helper(
     }
     // Insert song analysis in database
     dberr = sqlite3_prepare_v2(dbh,
-            "INSERT INTO songs(tempo, amplitude, frequency, attack, filename) VALUES(?, ?, ?, ?, ?)",
+            "INSERT INTO songs(tempo1, tempo2, tempo3, amplitude, frequency, attack, filename) VALUES(?, ?, ?, ?, ?)",
             -1, &res, 0);
     if (SQLITE_OK != dberr) {
         fprintf(stderr, "Error while inserting data in db: %s\n\n", sqlite3_errmsg(dbh));
@@ -152,11 +170,13 @@ int _parse_music_helper(
         // Pass file
         return 1;
     }
-    sqlite3_bind_double(res, 1, song_analysis.force_vector.tempo);
-    sqlite3_bind_double(res, 2, song_analysis.force_vector.amplitude);
-    sqlite3_bind_double(res, 3, song_analysis.force_vector.frequency);
-    sqlite3_bind_double(res, 4, song_analysis.force_vector.attack);
-    sqlite3_bind_text(res, 5, song_uri, strlen(song_uri), SQLITE_STATIC);
+    sqlite3_bind_double(res, 1, song_analysis.force_vector.tempo1);
+    sqlite3_bind_double(res, 2, song_analysis.force_vector.tempo2);
+    sqlite3_bind_double(res, 3, song_analysis.force_vector.tempo3);
+    sqlite3_bind_double(res, 4, song_analysis.force_vector.amplitude);
+    sqlite3_bind_double(res, 5, song_analysis.force_vector.frequency);
+    sqlite3_bind_double(res, 6, song_analysis.force_vector.attack);
+    sqlite3_bind_text(res, 7, song_uri, strlen(song_uri), SQLITE_STATIC);
     dberr = sqlite3_step(res);
     if (SQLITE_DONE != dberr) {
         // Free song analysis

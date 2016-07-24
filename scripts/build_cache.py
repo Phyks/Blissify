@@ -25,7 +25,7 @@ def main():
     cached_distances = cur.fetchall()
 
     # Get all songs
-    cur.execute("SELECT id, tempo, amplitude, frequency, attack, filename FROM songs")
+    cur.execute("SELECT id, tempo1, tempo2, tempo3, amplitude, frequency, attack, filename FROM songs")
     all_songs = cur.fetchall()
 
     for i in range(len(all_songs)):
@@ -42,24 +42,32 @@ def main():
                 continue
             # Compute distance
             distance = math.sqrt(
-                (song1["tempo"] - song2["tempo"])**2 +
+                (song1["tempo1"] - song2["tempo1"])**2 +
+                (song1["tempo2"] - song2["tempo2"])**2 +
+                (song1["tempo3"] - song2["tempo3"])**2 +
                 (song1["amplitude"] - song2["amplitude"])**2 +
                 (song1["frequency"] - song2["frequency"])**2 +
                 (song1["attack"] - song2["attack"])**2
             )
             similarity = (
-                (song1["tempo"] * song2["tempo"] +
+                (song1["tempo1"] * song2["tempo1"] +
+                 song1["tempo2"] * song2["tempo2"] +
+                 song1["tempo3"] * song2["tempo3"] +
                  song1["amplitude"] * song2["amplitude"] +
                  song1["frequency"] * song2["frequency"] +
                  song1["attack"] * song2["attack"]) /
                 (
                     math.sqrt(
-                        song1["tempo"]**2 +
+                        song1["tempo1"]**2 +
+                        song1["tempo2"]**2 +
+                        song1["tempo3"]**2 +
                         song1["amplitude"]**2 +
                         song1["frequency"]**2 +
                         song1["attack"]**2) *
                     math.sqrt(
-                        song2["tempo"]**2 +
+                        song2["tempo1"]**2 +
+                        song2["tempo2"]**2 +
+                        song2["tempo3"]**2 +
                         song2["amplitude"]**2 +
                         song2["frequency"]**2 +
                         song2["attack"]**2)

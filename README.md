@@ -5,7 +5,7 @@ Blissify is a wrapper around
 [Bliss](https://github.com/Polochon-street/bliss) to compute and store values
 in an SQLite database.
 
-It is done in an attempot to bind Bliss to MPD to be able to play
+It is done in an attempt to bind Bliss to MPD to be able to play
 smooth mixes with MPD, _à la_ Grooveshark radio.
 
 ## Dependencies

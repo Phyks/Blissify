@@ -2,5 +2,6 @@
 #define CONSTANTS_H
 
 #define DEFAULT_STRING_LENGTH 10000
+#define VERSION "0.1"
 
 #endif  // CONSTANTS_H
