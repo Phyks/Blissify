@@ -101,3 +101,10 @@ generate a playlist faster the next time.
 This `build_cache.py` script can be used to precompute the pairwise distances
 and build the cache, if you are willing to make some extra computation to
 generate mixes faster.
+
+
+## License
+
+This code is distributed under an MIT license.
+
+Feel free to contribute and reuse. For more details, see `LICENSE` file.
