@@ -8,6 +8,7 @@ _Note_: `blissify` should be available in your `$PATH`.
 """
 import argparse
 import dateutil.parser
+import logging
 import os
 import sqlite3
 import subprocess
@@ -27,7 +28,8 @@ def init_connection():
     # Get MPD connection settings
     try:
         mpd_host = os.environ["MPD_HOST"]
-        mpd_password, mpd_host = mpd_host.split("@")
+        if "@" in mpd_host:
+            mpd_password, mpd_host = mpd_host.split("@")
     except KeyError:
         mpd_host = "localhost"
         mpd_password = None
@@ -36,7 +38,7 @@ def init_connection():
     except KeyError:
         mpd_port = 6600
 
-    # Connect to MPD²
+    # Connect to MPD
     client = MPDClient()
     client.connect(mpd_host, mpd_port)
     if mpd_password is not None:
@@ -59,12 +61,16 @@ def full_rescan(mpd_root):
     # Connect to db
     db_path = os.path.join(_BLISSIFY_DATA_HOME, "db.sqlite3")
     logging.debug("Using DB path: %s." % (db_path,))
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    conn.execute('pragma foreign_keys=ON')
-    cur = conn.cursor()
-    # Purge db
-    cur.executescript("BEGIN TRANSACTION; DELETE FROM distances; DELETE FROM songs; DELETE FROM errors; COMMIT;")
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        conn.execute('pragma foreign_keys=ON')
+        cur = conn.cursor()
+        # Purge db
+        cur.executescript("BEGIN TRANSACTION; DELETE FROM distances; DELETE FROM songs; DELETE FROM errors; COMMIT;")
+        conn.close()
+    except sqlite3.OperationalError:
+        pass
 
     client = init_connection()
     # Get all songs from MPD and Blissify them
