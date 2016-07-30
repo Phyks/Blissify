@@ -153,7 +153,7 @@ int _parse_music_helper(
     }
     // Insert song analysis in database
     dberr = sqlite3_prepare_v2(dbh,
-            "INSERT INTO songs(tempo1, tempo2, tempo3, amplitude, frequency, attack, filename) VALUES(?, ?, ?, ?, ?)",
+            "INSERT INTO songs(tempo1, tempo2, tempo3, amplitude, frequency, attack, filename) VALUES(?, ?, ?, ?, ?, ?, ?)",
             -1, &res, 0);
     if (SQLITE_OK != dberr) {
         fprintf(stderr, "Error while inserting data in db: %s\n\n", sqlite3_errmsg(dbh));
