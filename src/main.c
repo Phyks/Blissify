@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
         sqlite3_close(dbh);
 		exit(EXIT_FAILURE);
     }
-    dberr = sqlite3_exec(dbh, "SELECT value FROM metadata WHERE name=version", NULL, NULL, NULL);
+    dberr = sqlite3_exec(dbh, "SELECT value FROM metadata WHERE name='version'", NULL, NULL, NULL);
     if (SQLITE_OK != dberr) {
         fprintf(stderr, "Error while fetching data in db: %s\n\n", sqlite3_errmsg(dbh));
         sqlite3_close(dbh);
