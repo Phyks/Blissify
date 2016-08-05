@@ -180,6 +180,7 @@ def main(queue_length):
                 continue
 
         # Get all other songs coordinates
+        # TODO: Don't rebuild entire cache if cache is already built
         closest_song = None
         cur.execute("SELECT id, tempo1, tempo2, tempo3, amplitude, frequency, attack, filename FROM songs")
         for tmp_song_data in cur.fetchall():

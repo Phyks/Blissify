@@ -77,8 +77,13 @@ def full_rescan(mpd_root):
     all_songs = [x["file"] for x in client.listall() if "file" in x]
     subprocess.check_call(["blissify", mpd_root] + all_songs)
     # Update the latest mtime stored
-    with open(os.path.join(_BLISSIFY_DATA_HOME, "latest_mtime.txt"), "r") as fh:
-        latest_mtime = int(fh.read())
+    latest_mtime = 0
+    try:
+        with open(os.path.join(_BLISSIFY_DATA_HOME, "latest_mtime.txt"),
+                  "r") as fh:
+            latest_mtime = int(fh.read())
+    except FileNotFoundError:
+        pass
     for song in all_songs:
         last_modified = client.find("file", song)["last_modified"]
         last_modified = int(dateutil.parser.parse(last_modified).timestamp())
@@ -113,13 +118,14 @@ def update_db(mpd_root):
     Update the blissify db taking newly added songs in MPD library.
     """
     client = init_connection()
-    with open(os.path.join(_BLISSIFY_DATA_HOME, "latest_mtime.txt"), "r") as fh:
-        latest_mtime = int(fh.read())
+    latest_mtime = 0
+    try:
+        with open(os.path.join(_BLISSIFY_DATA_HOME, "latest_mtime.txt"), "r") as fh:
+            latest_mtime = int(fh.read())
+    except FileNotFoundError:
+        pass
     songs = [x["file"] for x in client.find("modified-since", latest_mtime)]
     subprocess.check_call(["blissify", mpd_root] + songs)
-    # Update the latest mtime stored
-    with open(os.path.join(_BLISSIFY_DATA_HOME, "latest_mtime.txt"), "r") as fh:
-        latest_mtime = int(fh.read())
     for song in songs:
         last_modified = client.find("file", song)["last_modified"]
         last_modified = int(dateutil.parser.parse(last_modified).timestamp())
