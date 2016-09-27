@@ -116,7 +116,7 @@ def main(queue_length):
     except KeyError:
         mpd_port = 6600
 
-    # Connect to MPD²
+    # Connect to MPD
     client = PersistentMPDClient(host=mpd_host, port=mpd_port)
     if mpd_password is not None:
         client.password(mpd_password)
@@ -149,8 +149,8 @@ def main(queue_length):
     cur.execute("SELECT id, tempo1, tempo2, tempo3, amplitude, frequency, attack, filename FROM songs WHERE filename=?", (current_song,))
     current_song_coords = cur.fetchone()
     if current_song_coords is None:
-        logging.warning("Current song %s is not in db. You should update the db." %
-                        (current_song,))
+        logging.error("Current song %s is not in db. You should update the db." %
+                      (current_song,))
         client.close()
         client.disconnect()
         sys.exit(1)
@@ -168,7 +168,7 @@ def main(queue_length):
         # If distance to closest song is ok, just add the song
         if len(cached_distances) > 0:
             if(cached_distances[0]["distance"] < _DISTANCE_THRESHOLD and
-	       cached_distances[0]["similarity"] > _SIMILARITY_THRESHOLD):
+               cached_distances[0]["similarity"] > _SIMILARITY_THRESHOLD):
                 # Push it on the queue
                 client.add(cached_distances[0]["filename"])
                 # Continue using latest pushed song as current song
@@ -179,11 +179,11 @@ def main(queue_length):
                 current_song_coords = cached_distances[0]
                 continue
 
-        # Get all other songs coordinates
-        # TODO: Don't rebuild entire cache if cache is already built
+        # Get all other songs coordinates and iterate randomly on them
         closest_song = None
         cur.execute("SELECT id, tempo1, tempo2, tempo3, amplitude, frequency, attack, filename FROM songs")
-        for tmp_song_data in cur.fetchall():
+        songs = random.shuffle([song for song in cur.fetchall()])
+        for tmp_song_data in songs:
             if(tmp_song_data["filename"] == current_song_coords["filename"] or
                tmp_song_data["filename"] in cached_distances_songs or
                ("file: %s" % (tmp_song_data["filename"],)) in client.playlist()):
@@ -239,7 +239,6 @@ def main(queue_length):
                 conn.rollback()
 
             # Update the closest song
-            # TODO: Find a better heuristic?
             if closest_song is None or distance < closest_song[1]:
                 closest_song = (tmp_song_data, distance, similarity)
 
