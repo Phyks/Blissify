@@ -167,6 +167,10 @@ def main(queue_length):
                             for row in cur.fetchall()
                             if ("file: %s" % (row["filename"],)) not in client.playlist()]
         cached_distances_songs = [i["filename"] for i in cached_distances]
+        # Keep track of closest song
+        closest_song = (cached_distances[0],
+                        cached_distances[0]["distance"],
+                        cached_distances[1]["similarity"])
 
         # Get the songs close enough
         cached_distances_close_enough = [
@@ -186,7 +190,6 @@ def main(queue_length):
             continue
 
         # Get all other songs coordinates and iterate randomly on them
-        closest_song = None
         cur.execute("SELECT id, tempo1, tempo2, tempo3, amplitude, frequency, attack, filename FROM songs ORDER BY RANDOM()")
         for tmp_song_data in cur.fetchall():
             if(tmp_song_data["filename"] == current_song_coords["filename"] or
