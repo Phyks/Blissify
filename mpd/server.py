@@ -10,6 +10,7 @@ import argparse
 import dateutil.parser
 import logging
 import os
+import shutil
 import sqlite3
 import subprocess
 
@@ -61,6 +62,15 @@ def full_rescan(mpd_root):
     # Connect to db
     db_path = os.path.join(_BLISSIFY_DATA_HOME, "db.sqlite3")
     logging.debug("Using DB path: %s." % (db_path,))
+    # Backup database
+    backup_db_path = "%s.old" % (db_path,)
+    try:
+        shutil.copy(db_path, "%s" % (backup_db_path,))
+        print(("DB is saved as %s. You can remove this file manually " +
+               "at the end of the proces if you want.") % (backup_db_path,))
+    except FileNotFoundError:
+        pass
+    # Empty database
     try:
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
