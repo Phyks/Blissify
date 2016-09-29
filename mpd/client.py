@@ -107,7 +107,10 @@ def main(queue_length):
     # Get MPD connection settings
     try:
         mpd_host = os.environ["MPD_HOST"]
-        mpd_password, mpd_host = mpd_host.split("@")
+        try:
+            mpd_password, mpd_host = mpd_host.split("@")
+        except ValueError:
+            mpd_password = None
     except KeyError:
         mpd_host = "localhost"
         mpd_password = None
@@ -165,19 +168,22 @@ def main(queue_length):
                             if ("file: %s" % (row["filename"],)) not in client.playlist()]
         cached_distances_songs = [i["filename"] for i in cached_distances]
 
-        # If distance to closest song is ok, just add the song
-        if len(cached_distances) > 0:
-            if(cached_distances[0]["distance"] < _DISTANCE_THRESHOLD and
-               cached_distances[0]["similarity"] > _SIMILARITY_THRESHOLD):
-                # Push it on the queue
-                client.add(cached_distances[0]["filename"])
-                # Continue using latest pushed song as current song
-                logging.info("Using cached distance. Found %s. Distance is (%f, %f)." %
-                             (cached_distances[0]["filename"],
-                              cached_distances[0]["distance"],
-                              cached_distances[0]["similarity"]))
-                current_song_coords = cached_distances[0]
-                continue
+        # Get the songs close enough
+        cached_distances_close_enough = [
+            row for row in cached_distances
+            if row["distance"] < _DISTANCE_THRESHOLD and row["similarity"] > _SIMILARITY_THRESHOLD ]
+        if len(cached_distances_close_enough) > 0:
+            # If there are some close enough songs in the cache
+            random_close_enough = random.choice(cached_distances_close_enough)
+            # Push it on the queue
+            client.add(random_close_enough["filename"])
+            # Continue using latest pushed song as current song
+            logging.info("Using cached distance. Found %s. Distance is (%f, %f)." %
+                         (random_close_enough["filename"],
+                          random_close_enough["distance"],
+                          random_close_enough["similarity"]))
+            current_song_coords = random_close_enough
+            continue
 
         # Get all other songs coordinates and iterate randomly on them
         closest_song = None
