@@ -20,3 +20,5 @@ target_link_libraries (blissify
     m
     sqlite3
     bliss)
+
+install (TARGETS blissify DESTINATION /usr/bin)
