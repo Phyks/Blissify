@@ -168,9 +168,12 @@ def main(queue_length):
                             if ("file: %s" % (row["filename"],)) not in client.playlist()]
         cached_distances_songs = [i["filename"] for i in cached_distances]
         # Keep track of closest song
-        closest_song = (cached_distances[0],
-                        cached_distances[0]["distance"],
-                        cached_distances[1]["similarity"])
+        if cached_distances:
+            closest_song = (cached_distances[0],
+                            cached_distances[0]["distance"],
+                            cached_distances[1]["similarity"])
+        else:
+            closest_song = None
 
         # Get the songs close enough
         cached_distances_close_enough = [
