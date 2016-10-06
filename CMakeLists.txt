@@ -7,7 +7,7 @@ add_subdirectory (bliss)
 file (GLOB COMMON_SRC "src/*.c")
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(MULTIMEDIA REQUIRED libavformat libavutil libavcodec)
+pkg_check_modules(MULTIMEDIA REQUIRED libavformat libavutil libavcodec fftw3)
 include_directories(${MULTIMEDIA_INCLUDE_DIRS} include/ bliss/include)
 link_directories(${MULTIMEDIA_LIBRARY_DIRS})
 add_definitions(${MULTIMEDIA_CFLAGS_OTHER})
@@ -19,6 +19,6 @@ add_executable (blissify
 target_link_libraries (blissify
     m
     sqlite3
-    bliss)
+    bliss fftw3)
 
 install (TARGETS blissify DESTINATION /usr/bin)

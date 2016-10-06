@@ -19,6 +19,7 @@ import sys
 
 import mpd
 
+# logging.basicConfig(level='DEBUG')
 
 class PersistentMPDClient(mpd.MPDClient):
     """
@@ -149,7 +150,7 @@ def main(queue_length):
     logging.info("Currently played song is %s." % (current_song,))
 
     # Get current song coordinates
-    cur.execute("SELECT id, tempo1, tempo2, tempo3, amplitude, frequency, attack, filename FROM songs WHERE filename=?", (current_song,))
+    cur.execute("SELECT id, tempo, amplitude, frequency, attack, filename FROM songs WHERE filename=?", (current_song,))
     current_song_coords = cur.fetchone()
     if current_song_coords is None:
         logging.error("Current song %s is not in db. You should update the db." %
@@ -161,7 +162,7 @@ def main(queue_length):
     for i in range(queue_length):
         # Get cached distances from db
         cur.execute(
-            "SELECT id, filename, distance, similarity, tempo1, tempo2, tempo3, amplitude, frequency, attack FROM (SELECT s2.id AS id, s2.filename AS filename, s2.tempo1 AS tempo1, s2.tempo2 AS tempo2, s2.tempo3 AS tempo3, s2.amplitude AS amplitude, s2.frequency AS frequency, s2.attack AS attack, distances.distance AS distance, distances.similarity AS similarity FROM distances INNER JOIN songs AS s1 ON s1.id=distances.song1 INNER JOIN songs AS s2 on s2.id=distances.song2 WHERE s1.filename=? UNION SELECT s1.id as id, s1.filename AS filename, s1.tempo1 AS tempo1, s1.tempo2 AS tempo2, s1.tempo3 AS tempo3, s1.amplitude AS amplitude, s1.frequency AS frequency, s1.attack AS attack, distances.distance as distance, distances.similarity AS similarity FROM distances INNER JOIN songs AS s1 ON s1.id=distances.song1 INNER JOIN songs AS s2 on s2.id=distances.song2 WHERE s2.filename=?) ORDER BY distance ASC",
+            "SELECT id, filename, distance, similarity, tempo, amplitude, frequency, attack FROM (SELECT s2.id AS id, s2.filename AS filename, s2.tempo AS tempo, s2.amplitude AS amplitude, s2.frequency AS frequency, s2.attack AS attack, distances.distance AS distance, distances.similarity AS similarity FROM distances INNER JOIN songs AS s1 ON s1.id=distances.song1 INNER JOIN songs AS s2 on s2.id=distances.song2 WHERE s1.filename=? UNION SELECT s1.id as id, s1.filename AS filename, s1.tempo AS tempo, s1.amplitude AS amplitude, s1.frequency AS frequency, s1.attack AS attack, distances.distance as distance, distances.similarity AS similarity FROM distances INNER JOIN songs AS s1 ON s1.id=distances.song1 INNER JOIN songs AS s2 on s2.id=distances.song2 WHERE s2.filename=?) ORDER BY distance ASC",
             (current_song_coords["filename"], current_song_coords["filename"]))
         cached_distances = [row
                             for row in cur.fetchall()
@@ -193,7 +194,7 @@ def main(queue_length):
             continue
 
         # Get all other songs coordinates and iterate randomly on them
-        cur.execute("SELECT id, tempo1, tempo2, tempo3, amplitude, frequency, attack, filename FROM songs ORDER BY RANDOM()")
+        cur.execute("SELECT id, tempo, amplitude, frequency, attack, filename FROM songs ORDER BY RANDOM()")
         for tmp_song_data in cur.fetchall():
             if(tmp_song_data["filename"] == current_song_coords["filename"] or
                tmp_song_data["filename"] in cached_distances_songs or
@@ -203,32 +204,24 @@ def main(queue_length):
                 continue
             # Compute distance
             distance = math.sqrt(
-                (current_song_coords["tempo1"] - tmp_song_data["tempo1"])**2 +
-                (current_song_coords["tempo2"] - tmp_song_data["tempo2"])**2 +
-                (current_song_coords["tempo3"] - tmp_song_data["tempo3"])**2 +
+                (current_song_coords["tempo"] - tmp_song_data["tempo"])**2 +
                 (current_song_coords["amplitude"] - tmp_song_data["amplitude"])**2 +
                 (current_song_coords["frequency"] - tmp_song_data["frequency"])**2 +
                 (current_song_coords["attack"] - tmp_song_data["attack"])**2
             )
             similarity = (
-                (current_song_coords["tempo1"] * tmp_song_data["tempo1"] +
-                 current_song_coords["tempo2"] * tmp_song_data["tempo2"] +
-                 current_song_coords["tempo3"] * tmp_song_data["tempo3"] +
+                (current_song_coords["tempo"] * tmp_song_data["tempo"] +
                  current_song_coords["amplitude"] * tmp_song_data["amplitude"] +
                  current_song_coords["frequency"] * tmp_song_data["frequency"] +
                  current_song_coords["attack"] * tmp_song_data["attack"]) /
                 (
                     math.sqrt(
-                        current_song_coords["tempo1"]**2 +
-                        current_song_coords["tempo2"]**2 +
-                        current_song_coords["tempo3"]**2 +
+                        current_song_coords["tempo"]**2 +
                         current_song_coords["amplitude"]**2 +
                         current_song_coords["frequency"]**2 +
                         current_song_coords["attack"]**2) *
                     math.sqrt(
-                        tmp_song_data["tempo1"]**2 +
-                        tmp_song_data["tempo2"]**2 +
-                        tmp_song_data["tempo3"]**2 +
+                        tmp_song_data["tempo"]**2 +
                         tmp_song_data["amplitude"]**2 +
                         tmp_song_data["frequency"]**2 +
                         tmp_song_data["attack"]**2)
