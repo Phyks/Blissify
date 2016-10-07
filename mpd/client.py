@@ -172,7 +172,7 @@ def main(queue_length):
         if cached_distances:
             closest_song = (cached_distances[0],
                             cached_distances[0]["distance"],
-                            cached_distances[1]["similarity"])
+                            cached_distances[0]["similarity"])
         else:
             closest_song = None
 
