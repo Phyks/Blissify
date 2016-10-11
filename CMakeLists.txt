@@ -19,6 +19,7 @@ add_executable (blissify
 target_link_libraries (blissify
     m
     sqlite3
-    bliss fftw3)
+    fftw3
+    bliss)
 
 install (TARGETS blissify DESTINATION /usr/bin)

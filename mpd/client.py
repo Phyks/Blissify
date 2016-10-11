@@ -19,7 +19,6 @@ import sys
 
 import mpd
 
-# logging.basicConfig(level='DEBUG')
 
 class PersistentMPDClient(mpd.MPDClient):
     """
