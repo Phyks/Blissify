@@ -139,7 +139,7 @@ def main(queue_length):
     # Take the last song from current playlist and iterate from it
     playlist = client.playlist()
     if len(playlist) > 0:
-        current_song = playlist[-1].replace("file:", "").strip()
+        current_song = playlist[-1].replace("file: ", "").rstrip()
     # If current playlist is empty
     else:
         # Add a random song to start with
