@@ -9,6 +9,7 @@ and MPD_PORT scheme described in `mpc` man.
 You can pass an integer argument to the script to change the length of the
 generated playlist (default is to add 20 songs).
 """
+import argparse
 import logging
 import math
 import os
@@ -102,8 +103,60 @@ if "XDG_DATA_HOME" in os.environ:
 else:
     _BLISSIFY_DATA_HOME = os.path.expanduser("~/.local/share/blissify")
 
+# Distance between two songs
+def distance(x, y):
+    distance = math.sqrt(
+        (x["tempo"] - y["tempo"])**2 +
+        (x["amplitude"] - y["amplitude"])**2 +
+        (x["frequency"] - y["frequency"])**2 +
+        (x["attack"] - y["attack"])**2)
+    return distance
 
-def main(queue_length):
+# Distance between a set and a point
+def distance_set(X, y):
+    temp_distance = distance(X[0], y);
+    for song in X:
+        a = distance(song, y); 
+        temp_distance = a if a < temp_distance else temp_distance;
+    return temp_distance;
+
+# Hausdorff distance between two sets
+def hauff_distance_sets(X, Y):
+    temp_distance = distance_set(X, Y[0]);
+    for song in X:
+        a = distance_set(Y, song);
+        temp_distance = a if a > temp_distance else temp_distance;
+
+    for song in Y:
+        a = distance_set(X, song);
+        temp_distance = a if a > temp_distance else temp_distance;
+    return temp_distance
+
+def mean_song(X):
+    count = 0;
+    result = { 'tempo': 0, 'amplitude': 0, 'frequency':0, 'attack':0 } 
+   
+    for song in X:
+        result["tempo"] += song["tempo"];
+        result["amplitude"] += song["amplitude"];
+        result["frequency"] += song["frequency"];
+        result["attack"] += song["attack"];
+        count = count + 1;
+    result["tempo"] /= count;
+    result["amplitude"] /= count;
+    result["frequency"] /= count;
+    result["attack"] /= count;
+    return result;
+   
+
+# Custom distance between two sets
+def distance_sets(X, Y):
+    a = mean_song(X);
+    b = mean_song(Y);
+
+    return distance(a, b);
+
+def main_album(queue_length):
     # Get MPD connection settings
     try:
         mpd_host = os.environ["MPD_HOST"]
@@ -142,12 +195,110 @@ def main(queue_length):
         current_song = playlist[-1].replace("file: ", "").rstrip()
     # If current playlist is empty
     else:
-        # Add a random song to start with
+        # Add a random song to start with TODO add a random album
         all_songs = [x["file"] for x in client.listall() if "file" in x]
         current_song = random.choice(all_songs)
         client.add(current_song)
     logging.info("Currently played song is %s." % (current_song,))
 
+    # Get current song coordinates
+    cur.execute("SELECT id, tempo, amplitude, frequency, attack, filename, album FROM songs WHERE filename=?", (current_song,))
+    current_song_coords = cur.fetchone()
+    if current_song_coords is None:
+        logging.error("Current song %s is not in db. You should update the db." %
+                      (current_song,))
+        client.close()
+        client.disconnect()
+        sys.exit(1)
+
+    for i in range(queue_length):
+        # No cache management
+        # Get all songs from the current album
+        album = current_song_coords["album"];
+        cur.execute("SELECT id, tempo, amplitude, frequency, attack, filename, album FROM songs WHERE album=?", (album,))
+        target_album_set = cur.fetchall();
+
+        # Get all other songs
+        cur.execute("SELECT id, tempo, amplitude, frequency, attack, filename, album FROM songs ORDER BY album")
+        tmp_song_data = cur.fetchone()
+        shortest_distance = -1 
+
+        # Check the best suitable album
+        while tmp_song_data:
+            current_album_set = list()
+            current_album_set.append(tmp_song_data)
+            tmp_song_data = cur.fetchone()
+
+            i = 0
+            # Get all songs from the current temporary album
+            while tmp_song_data:
+                if (current_album_set[i]["album"] == tmp_song_data["album"]):
+                    current_album_set.append(tmp_song_data);
+                else:
+                    break;
+                tmp_song_data = cur.fetchone()
+                i = i + 1
+            # Skip current album and already processed albums    
+            if ( (current_album_set[0]["album"] != target_album_set[0]["album"]) and
+                not (("file: %s" % (current_album_set[0]["filename"],)) in client.playlist()) ):
+                tmp_distance = distance_sets(current_album_set, target_album_set)
+                if tmp_distance < shortest_distance or shortest_distance == -1:
+                    shortest_distance = tmp_distance
+                    closest_album = current_album_set;
+
+        logging.info("Closest album found is \"%s\". Distance is %f." % (closest_album[0]["album"], shortest_distance))
+        for song in closest_album:
+            client.add(song["filename"])
+        current_song_coords = closest_album[-1]
+
+    conn.close()
+    client.close()
+    client.disconnect()
+
+def main_single(queue_length):
+    # Get MPD connection settings
+    try:
+        mpd_host = os.environ["MPD_HOST"]
+        try:
+            mpd_password, mpd_host = mpd_host.split("@")
+        except ValueError:
+            mpd_password = None
+    except KeyError:
+        mpd_host = "localhost"
+        mpd_password = None
+    try:
+        mpd_port = os.environ["MPD_PORT"]
+    except KeyError:
+        mpd_port = 6600
+
+    # Connect to MPD
+    client = PersistentMPDClient(host=mpd_host, port=mpd_port)
+    if mpd_password is not None:
+        client.password(mpd_password)
+    # Connect to db
+    db_path = os.path.join(_BLISSIFY_DATA_HOME, "db.sqlite3")
+    logging.debug("Using DB path: %s." % (db_path,))
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    conn.execute('pragma foreign_keys=ON')
+    cur = conn.cursor()
+
+    # Ensure random is not enabled
+    status = client.status()
+    if int(status["random"]) != 0:
+        logging.warning("Random mode is enabled. Are you sure you want it?")
+
+	# Take the last song from current playlist and iterate from it
+    playlist = client.playlist()
+    if len(playlist) > 0:
+        current_song = playlist[-1].replace("file: ", "").rstrip()
+    # If current playlist is empty
+    else:
+        # Add a random song to start with
+        all_songs = [x["file"] for x in client.listall() if "file" in x]
+        current_song = random.choice(all_songs)
+        client.add(current_song)
+    logging.info("Currently played song is %s." % (current_song,))
     # Get current song coordinates
     cur.execute("SELECT id, tempo, amplitude, frequency, attack, filename FROM songs WHERE filename=?", (current_song,))
     current_song_coords = cur.fetchone()
@@ -274,10 +425,22 @@ def main(queue_length):
 
 
 if __name__ == "__main__":
-    queue_length = _QUEUE_LENGTH
-    if len(sys.argv) > 1:
-        try:
-            queue_length = int(sys.argv[1])
-        except ValueError:
-            sys.exit("Usage: %s [PLAYLIST_LENGTH]" % (sys.argv[0],))
-    main(queue_length)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--queue-length", help="The number of items to add to the MPD playlist.", type=int)
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--song-based", help="Make a playlist based on single songs.",
+        action="store_true", default=False)
+    group.add_argument("--album-based", help="Make a playlist based on whole albums.",
+        action="store_true", default=False)
+
+    args = parser.parse_args()
+    if args.queue_length:
+        queue_length = args.queue_length
+    else:
+        queue_length = _QUEUE_LENGTH
+
+    if args.song_based:
+        main_single(queue_length)
+    elif args.album_based:
+        main_album(queue_length)
+

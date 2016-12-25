@@ -51,7 +51,8 @@ int _init_db(char *data_folder, char* db_path)
         amplitude REAL, \
         frequency REAL, \
         attack REAL, \
-        filename TEXT UNIQUE)",
+        filename TEXT UNIQUE, \
+		album TEXT)",
         NULL, NULL, NULL);
     if (SQLITE_OK != dberr) {
         fprintf(stderr, "Error creating db: %s.\n", sqlite3_errmsg(dbh));
@@ -151,7 +152,7 @@ int _parse_music_helper(
     }
     // Insert song analysis in database
     dberr = sqlite3_prepare_v2(dbh,
-            "INSERT INTO songs(tempo, amplitude, frequency, attack, filename) VALUES(?, ?, ?, ?, ?)",
+            "INSERT INTO songs(tempo, amplitude, frequency, attack, filename, album) VALUES(?, ?, ?, ?, ?, ?)",
             -1, &res, 0);
     if (SQLITE_OK != dberr) {
         fprintf(stderr, "Error while inserting data in db: %s\n\n", sqlite3_errmsg(dbh));
@@ -173,6 +174,7 @@ int _parse_music_helper(
     sqlite3_bind_double(res, 3, song_analysis.force_vector.frequency);
     sqlite3_bind_double(res, 4, song_analysis.force_vector.attack);
     sqlite3_bind_text(res, 5, song_uri, strlen(song_uri), SQLITE_STATIC);
+	sqlite3_bind_text(res, 6, song_analysis.album, strlen(song_analysis.album), SQLITE_STATIC);
     dberr = sqlite3_step(res);
     if (SQLITE_DONE != dberr) {
         // Free song analysis
