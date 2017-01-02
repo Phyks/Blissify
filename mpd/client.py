@@ -103,60 +103,63 @@ if "XDG_DATA_HOME" in os.environ:
 else:
     _BLISSIFY_DATA_HOME = os.path.expanduser("~/.local/share/blissify")
 
-# Distance between two songs
+
 def distance(x, y):
-    distance = math.sqrt(
+    """
+    Compute the distance between two songs.
+
+    Params:
+        - x: First song dict
+        - y: Second song dict
+    Returns: The cartesian distance between the two songs.
+    """
+    return math.sqrt(
         (x["tempo"] - y["tempo"])**2 +
         (x["amplitude"] - y["amplitude"])**2 +
         (x["frequency"] - y["frequency"])**2 +
-        (x["attack"] - y["attack"])**2)
-    return distance
+        (x["attack"] - y["attack"])**2
+    )
 
-# Distance between a set and a point
-def distance_set(X, y):
-    temp_distance = distance(X[0], y);
-    for song in X:
-        a = distance(song, y); 
-        temp_distance = a if a < temp_distance else temp_distance;
-    return temp_distance;
-
-# Hausdorff distance between two sets
-def hauff_distance_sets(X, Y):
-    temp_distance = distance_set(X, Y[0]);
-    for song in X:
-        a = distance_set(Y, song);
-        temp_distance = a if a > temp_distance else temp_distance;
-
-    for song in Y:
-        a = distance_set(X, song);
-        temp_distance = a if a > temp_distance else temp_distance;
-    return temp_distance
 
 def mean_song(X):
-    count = 0;
-    result = { 'tempo': 0, 'amplitude': 0, 'frequency':0, 'attack':0 } 
-   
+    """
+    Compute a "mean" song for a given iterable of song dicts.
+
+    Params:
+        - X: An iterable of song dicts.
+    Returns: A "mean" song, whose features are the mean features of the songs
+    in the iterable.
+    """
+    count = 0
+    result = {'tempo': 0, 'amplitude': 0, 'frequency': 0, 'attack': 0}
+
     for song in X:
-        result["tempo"] += song["tempo"];
-        result["amplitude"] += song["amplitude"];
-        result["frequency"] += song["frequency"];
-        result["attack"] += song["attack"];
-        count = count + 1;
-    result["tempo"] /= count;
-    result["amplitude"] /= count;
-    result["frequency"] /= count;
-    result["attack"] /= count;
-    return result;
-   
+        result["tempo"] += song["tempo"]
+        result["amplitude"] += song["amplitude"]
+        result["frequency"] += song["frequency"]
+        result["attack"] += song["attack"]
+        count = count + 1
+    result["tempo"] /= count
+    result["amplitude"] /= count
+    result["frequency"] /= count
+    result["attack"] /= count
+    return result
 
-# Custom distance between two sets
+
 def distance_sets(X, Y):
-    a = mean_song(X);
-    b = mean_song(Y);
+    """
+    Compute the distance between two iterables of song dicts, defined as the
+    distance between the two mean songs of the iterables.
 
-    return distance(a, b);
+    Params:
+        - X: First iterable of song dicts.
+        - Y: First iterable of song dicts.
+    Returns: The distance between the two iterables.
+    """
+    return distance(mean_song(X), mean_song(Y))
 
-def main_album(queue_length):
+
+def _init():
     # Get MPD connection settings
     try:
         mpd_host = os.environ["MPD_HOST"]
@@ -199,6 +202,7 @@ def main_album(queue_length):
         all_songs = [x["file"] for x in client.listall() if "file" in x]
         current_song = random.choice(all_songs)
         client.add(current_song)
+
     logging.info("Currently played song is %s." % (current_song,))
 
     # Get current song coordinates
@@ -211,17 +215,23 @@ def main_album(queue_length):
         client.disconnect()
         sys.exit(1)
 
+    return client, conn, cur, current_song_coords
+
+
+def main_album(queue_length):
+    client, conn, cur, current_song_coords = _init()
+
     for i in range(queue_length):
         # No cache management
         # Get all songs from the current album
-        album = current_song_coords["album"];
+        album = current_song_coords["album"]
         cur.execute("SELECT id, tempo, amplitude, frequency, attack, filename, album FROM songs WHERE album=?", (album,))
-        target_album_set = cur.fetchall();
+        target_album_set = cur.fetchall()
 
         # Get all other songs
         cur.execute("SELECT id, tempo, amplitude, frequency, attack, filename, album FROM songs ORDER BY album")
         tmp_song_data = cur.fetchone()
-        shortest_distance = -1 
+        shortest_distance = -1
 
         # Check the best suitable album
         while tmp_song_data:
@@ -233,18 +243,18 @@ def main_album(queue_length):
             # Get all songs from the current temporary album
             while tmp_song_data:
                 if (current_album_set[i]["album"] == tmp_song_data["album"]):
-                    current_album_set.append(tmp_song_data);
+                    current_album_set.append(tmp_song_data)
                 else:
-                    break;
+                    break
                 tmp_song_data = cur.fetchone()
                 i = i + 1
-            # Skip current album and already processed albums    
-            if ( (current_album_set[0]["album"] != target_album_set[0]["album"]) and
-                not (("file: %s" % (current_album_set[0]["filename"],)) in client.playlist()) ):
+            # Skip current album and already processed albums
+            if((current_album_set[0]["album"] != target_album_set[0]["album"]) and
+               not (("file: %s" % (current_album_set[0]["filename"],)) in client.playlist())):
                 tmp_distance = distance_sets(current_album_set, target_album_set)
                 if tmp_distance < shortest_distance or shortest_distance == -1:
                     shortest_distance = tmp_distance
-                    closest_album = current_album_set;
+                    closest_album = current_album_set
 
         logging.info("Closest album found is \"%s\". Distance is %f." % (closest_album[0]["album"], shortest_distance))
         for song in closest_album:
@@ -255,59 +265,9 @@ def main_album(queue_length):
     client.close()
     client.disconnect()
 
+
 def main_single(queue_length):
-    # Get MPD connection settings
-    try:
-        mpd_host = os.environ["MPD_HOST"]
-        try:
-            mpd_password, mpd_host = mpd_host.split("@")
-        except ValueError:
-            mpd_password = None
-    except KeyError:
-        mpd_host = "localhost"
-        mpd_password = None
-    try:
-        mpd_port = os.environ["MPD_PORT"]
-    except KeyError:
-        mpd_port = 6600
-
-    # Connect to MPD
-    client = PersistentMPDClient(host=mpd_host, port=mpd_port)
-    if mpd_password is not None:
-        client.password(mpd_password)
-    # Connect to db
-    db_path = os.path.join(_BLISSIFY_DATA_HOME, "db.sqlite3")
-    logging.debug("Using DB path: %s." % (db_path,))
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    conn.execute('pragma foreign_keys=ON')
-    cur = conn.cursor()
-
-    # Ensure random is not enabled
-    status = client.status()
-    if int(status["random"]) != 0:
-        logging.warning("Random mode is enabled. Are you sure you want it?")
-
-	# Take the last song from current playlist and iterate from it
-    playlist = client.playlist()
-    if len(playlist) > 0:
-        current_song = playlist[-1].replace("file: ", "").rstrip()
-    # If current playlist is empty
-    else:
-        # Add a random song to start with
-        all_songs = [x["file"] for x in client.listall() if "file" in x]
-        current_song = random.choice(all_songs)
-        client.add(current_song)
-    logging.info("Currently played song is %s." % (current_song,))
-    # Get current song coordinates
-    cur.execute("SELECT id, tempo, amplitude, frequency, attack, filename FROM songs WHERE filename=?", (current_song,))
-    current_song_coords = cur.fetchone()
-    if current_song_coords is None:
-        logging.error("Current song %s is not in db. You should update the db." %
-                      (current_song,))
-        client.close()
-        client.disconnect()
-        sys.exit(1)
+    client, conn, cur, current_song_coords = _init()
 
     for i in range(queue_length):
         # Get cached distances from db
