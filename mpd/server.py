@@ -105,7 +105,7 @@ def full_rescan(mpd_root):
         if last_modified > latest_mtime:
             latest_mtime = last_modified
     with open(os.path.join(_BLISSIFY_DATA_HOME, "latest_mtime.txt"), "w") as fh:
-        print(latest_mtime)
+
         fh.write(str(latest_mtime))
     close_connection(client)
 

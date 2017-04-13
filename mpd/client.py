@@ -17,9 +17,9 @@ import random
 import sqlite3
 import socket
 import sys
-
+import enum
 import mpd
-
+import random
 
 class PersistentMPDClient(mpd.MPDClient):
     """
@@ -95,8 +95,6 @@ class PersistentMPDClient(mpd.MPDClient):
 logging.basicConfig(level=logging.INFO)
 
 _QUEUE_LENGTH = 20
-_DISTANCE_THRESHOLD = 4.0
-_SIMILARITY_THRESHOLD = 0.95
 
 if "XDG_DATA_HOME" in os.environ:
     _BLISSIFY_DATA_HOME = os.path.expandvars("$XDG_DATA_HOME/blissify")
@@ -130,15 +128,17 @@ def mean_song(X):
     Returns: A "mean" song, whose features are the mean features of the songs
     in the iterable.
     """
-    count = 0
+
     result = {'tempo': 0, 'amplitude': 0, 'frequency': 0, 'attack': 0}
+
+    count = len(X)
 
     for song in X:
         result["tempo"] += song["tempo"]
         result["amplitude"] += song["amplitude"]
         result["frequency"] += song["frequency"]
         result["attack"] += song["attack"]
-        count = count + 1
+
     result["tempo"] /= count
     result["amplitude"] /= count
     result["frequency"] /= count
@@ -218,167 +218,93 @@ def _init():
     return client, conn, cur, current_song_coords
 
 
-def main_album(queue_length):
+def main_album(queue_length, option_best=True):
     client, conn, cur, current_song_coords = _init()
 
+    # Get 'queue_length' random albums
     for i in range(queue_length):
         # No cache management
         # Get all songs from the current album
-        album = current_song_coords["album"]
-        cur.execute("SELECT id, tempo, amplitude, frequency, attack, filename, album FROM songs WHERE album=?", (album,))
+        distance_array = []
+
+        # Get album name and all of this album's songs coordinates
+        album_name = current_song_coords["album"]
+        cur.execute("SELECT id, tempo, amplitude, frequency, attack, filename, album FROM songs WHERE album=?", (album_name,))
         target_album_set = cur.fetchall()
 
-        # Get all other songs
-        cur.execute("SELECT id, tempo, amplitude, frequency, attack, filename, album FROM songs ORDER BY album")
-        tmp_song_data = cur.fetchone()
-        shortest_distance = -1
+        # Get all albums
+        cur.execute("SELECT DISTINCT album FROM songs")
+        albums = cur.fetchall();
 
-        # Check the best suitable album
-        while tmp_song_data:
-            current_album_set = list()
-            current_album_set.append(tmp_song_data)
-            tmp_song_data = cur.fetchone()
+        # Compute the distance between current album and all other albums
+        for tmp_album in albums:
+            # Get all songs in the album
+            cur.execute("SELECT id, tempo, amplitude, frequency, attack, filename, album FROM songs WHERE album=?", (tmp_album["album"],))
+            tmp_songs = cur.fetchall()
+            # Don't compute distance for the current album and albums already in the playlist
+            if(tmp_album["album"] == target_album_set[0]["album"] or
+               ("file: %s" % (tmp_songs[0]["filename"],)) in client.playlist()):
+                # Skip current song and already processed songs
+                logging.debug("Skipping %s." % (tmp_album["album"]))
+                continue
+           
+            tmp_distance = distance_sets(tmp_songs, target_album_set)
+            distance_array.append({'Distance': tmp_distance, 'Album': tmp_songs})
+            logging.debug("Distance between %s and %s is %f." %
+                (target_album_set[0]["album"],
+                tmp_album["album"], tmp_distance))
 
-            i = 0
-            # Get all songs from the current temporary album
-            while tmp_song_data:
-                if (current_album_set[i]["album"] == tmp_song_data["album"]):
-                    current_album_set.append(tmp_song_data)
-                else:
-                    break
-                tmp_song_data = cur.fetchone()
-                i = i + 1
-            # Skip current album and already processed albums
-            if((current_album_set[0]["album"] != target_album_set[0]["album"]) and
-               not (("file: %s" % (current_album_set[0]["filename"],)) in client.playlist())):
-                tmp_distance = distance_sets(current_album_set, target_album_set)
-                if tmp_distance < shortest_distance or shortest_distance == -1:
-                    shortest_distance = tmp_distance
-                    closest_album = current_album_set
+        # Ascending sort by distance (the lower the closer)
+        distance_array.sort(key=lambda x: x["Distance"])
 
-        logging.info("Closest album found is \"%s\". Distance is %f." % (closest_album[0]["album"], shortest_distance))
-        for song in closest_album:
+        # Chose between best album and one of the top 10 at random
+        indice = 0 if option_best else random.randrange(10)
+        
+        logging.info("Closest album found is \"%s\". Distance is %f." %
+            (distance_array[indice]["Album"][0]["album"], distance_array[indice]["Distance"]))
+
+        for song in distance_array[indice]["Album"]:
             client.add(song["filename"])
-        current_song_coords = closest_album[-1]
 
     conn.close()
     client.close()
     client.disconnect()
 
 
-def main_single(queue_length):
+def main_single(queue_length, option_best=True):
     client, conn, cur, current_song_coords = _init()
 
+    # Get 'queue_length' random songs
     for i in range(queue_length):
-        # Get cached distances from db
-        cur.execute(
-            "SELECT id, filename, distance, similarity, tempo, amplitude, frequency, attack FROM (SELECT s2.id AS id, s2.filename AS filename, s2.tempo AS tempo, s2.amplitude AS amplitude, s2.frequency AS frequency, s2.attack AS attack, distances.distance AS distance, distances.similarity AS similarity FROM distances INNER JOIN songs AS s1 ON s1.id=distances.song1 INNER JOIN songs AS s2 on s2.id=distances.song2 WHERE s1.filename=? UNION SELECT s1.id as id, s1.filename AS filename, s1.tempo AS tempo, s1.amplitude AS amplitude, s1.frequency AS frequency, s1.attack AS attack, distances.distance as distance, distances.similarity AS similarity FROM distances INNER JOIN songs AS s1 ON s1.id=distances.song1 INNER JOIN songs AS s2 on s2.id=distances.song2 WHERE s2.filename=?) ORDER BY distance ASC",
-            (current_song_coords["filename"], current_song_coords["filename"]))
-        cached_distances = [row
-                            for row in cur.fetchall()
-                            if ("file: %s" % (row["filename"],)) not in client.playlist()]
-        cached_distances_songs = [i["filename"] for i in cached_distances]
-        # Keep track of closest song
-        if cached_distances:
-            closest_song = (cached_distances[0],
-                            cached_distances[0]["distance"],
-                            cached_distances[0]["similarity"])
-        else:
-            closest_song = None
+        distance_array = []
 
-        # Get the songs close enough
-        cached_distances_close_enough = [
-            row for row in cached_distances
-            if row["distance"] < _DISTANCE_THRESHOLD and row["similarity"] > _SIMILARITY_THRESHOLD ]
-        if len(cached_distances_close_enough) > 0:
-            # If there are some close enough songs in the cache
-            random_close_enough = random.choice(cached_distances_close_enough)
-            # Push it on the queue
-            client.add(random_close_enough["filename"])
-            # Continue using latest pushed song as current song
-            logging.info("Using cached distance. Found %s. Distance is (%f, %f)." %
-                         (random_close_enough["filename"],
-                          random_close_enough["distance"],
-                          random_close_enough["similarity"]))
-            current_song_coords = random_close_enough
-            continue
-
-        # Get all other songs coordinates and iterate randomly on them
-        cur.execute("SELECT id, tempo, amplitude, frequency, attack, filename FROM songs ORDER BY RANDOM()")
+        # Get all other songs coordinates and iterate on them
+        cur.execute("SELECT id, tempo, amplitude, frequency, attack, filename FROM songs")
         for tmp_song_data in cur.fetchall():
+            # Skip current song and already processed songs
             if(tmp_song_data["filename"] == current_song_coords["filename"] or
-               tmp_song_data["filename"] in cached_distances_songs or
                ("file: %s" % (tmp_song_data["filename"],)) in client.playlist()):
-                # Skip current song and already processed songs
                 logging.debug("Skipping %s." % (tmp_song_data["filename"]))
                 continue
-            # Compute distance
-            distance = math.sqrt(
-                (current_song_coords["tempo"] - tmp_song_data["tempo"])**2 +
-                (current_song_coords["amplitude"] - tmp_song_data["amplitude"])**2 +
-                (current_song_coords["frequency"] - tmp_song_data["frequency"])**2 +
-                (current_song_coords["attack"] - tmp_song_data["attack"])**2
-            )
-            similarity = (
-                (current_song_coords["tempo"] * tmp_song_data["tempo"] +
-                 current_song_coords["amplitude"] * tmp_song_data["amplitude"] +
-                 current_song_coords["frequency"] * tmp_song_data["frequency"] +
-                 current_song_coords["attack"] * tmp_song_data["attack"]) /
-                (
-                    math.sqrt(
-                        current_song_coords["tempo"]**2 +
-                        current_song_coords["amplitude"]**2 +
-                        current_song_coords["frequency"]**2 +
-                        current_song_coords["attack"]**2) *
-                    math.sqrt(
-                        tmp_song_data["tempo"]**2 +
-                        tmp_song_data["amplitude"]**2 +
-                        tmp_song_data["frequency"]**2 +
-                        tmp_song_data["attack"]**2)
-                )
-            )
-            logging.debug("Distance between %s and %s is (%f, %f)." %
-                          (current_song_coords["filename"],
-                           tmp_song_data["filename"], distance, similarity))
-            # Store distance in db cache
-            try:
-                logging.debug("Storing distance in database.")
-                conn.execute(
-                    "INSERT INTO distances(song1, song2, distance, similarity) VALUES(?, ?, ?, ?)",
-                    (current_song_coords["id"], tmp_song_data["id"], distance,
-                     similarity))
-                conn.commit()
-            except sqlite3.IntegrityError:
-                logging.warning("Unable to insert distance in database.")
-                conn.rollback()
+            # Compute distance between current song and songs in the loop
+            tmp_distance = distance(tmp_song_data, current_song_coords)
+            distance_array.append({'Distance': tmp_distance, 'Song': tmp_song_data})
+            logging.debug("Distance between %s and %s is %f." %
+                (current_song_coords["filename"],
+                tmp_song_data["filename"], tmp_distance))
 
-            # Update the closest song
-            if closest_song is None or distance < closest_song[1]:
-                closest_song = (tmp_song_data, distance, similarity)
+        # Ascending sort by distance (the lower the closer)
+        distance_array.sort(key=lambda x: x['Distance'])
 
-            # If distance is ok, break from the loop
-            if(distance < _DISTANCE_THRESHOLD and
-               similarity > _SIMILARITY_THRESHOLD):
-                break
+        # Chose between best album and one of the top 10 at random
+        indice = 0 if option_best else random.randrange(10)
 
-        # If a close enough song is found
-        if(distance < _DISTANCE_THRESHOLD and
-           similarity > _SIMILARITY_THRESHOLD):
-            # Push it on the queue
-            client.add(tmp_song_data["filename"])
-            # Continue using latest pushed song as current song
-            logging.info("Found a close song: %s. Distance is (%f, %f)." %
-                         (tmp_song_data["filename"], distance, similarity))
-            current_song_coords = tmp_song_data
-            continue
-        # If no song found, take the closest one
-        else:
-            logging.info("No close enough song found. Using %s. Distance is (%f, %f)." %
-                         (closest_song[0]["filename"], closest_song[1],
-                          closest_song[2]))
-            current_song_coords = closest_song[0]
-            client.add(closest_song[0]["filename"])
-            continue
+        current_song_coords = distance_array[indice]['Song']
+
+        client.add(current_song_coords["filename"])
+        logging.info("Found a close song: %s. Distance is %f." %
+            (current_song_coords["filename"], distance_array[0]['Distance']))
+
     conn.close()
     client.close()
     client.disconnect()
@@ -387,6 +313,8 @@ def main_single(queue_length):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--queue-length", help="The number of items to add to the MPD playlist.", type=int)
+    parser.add_argument("--best-playlist", help="Makes the best possible playlist, always the same for a fixed song/album",
+        action='store_true', default=True)
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--song-based", help="Make a playlist based on single songs.",
         action="store_true", default=False)
@@ -400,7 +328,7 @@ if __name__ == "__main__":
         queue_length = _QUEUE_LENGTH
 
     if args.song_based:
-        main_single(queue_length)
+        main_single(queue_length, args.best_playlist)
     elif args.album_based:
-        main_album(queue_length)
+        main_album(queue_length, args.best_playlist)
 
